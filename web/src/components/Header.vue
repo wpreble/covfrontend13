@@ -1,8 +1,11 @@
 <template>
     <header>
         <div class="brand">
-            <h1>Covenant Network</h1>
-            <p>Sovereign + Secure</p>
+            <img src="/Covenant Logo White.png" alt="Covenant" class="logo" />
+            <div>
+                <h1>Covenant Secure Cloud</h1>
+                <p>Sovereign + Secure</p>
+            </div>
         </div>
 
         <nav class="tabs" aria-label="Primary">
@@ -10,8 +13,11 @@
                 >Agents</RouterLink
             >
 
-            <RouterLink to="/command" class="tab" active-class="active"
-                >Command</RouterLink
+            <RouterLink to="/compute" class="tab" active-class="active"
+                >Compute</RouterLink
+            >
+            <RouterLink to="/build" class="tab" active-class="active"
+                >Build</RouterLink
             >
             <RouterLink to="/payments" class="tab" active-class="active"
                 >Payments</RouterLink
@@ -20,7 +26,7 @@
 
         <div class="pillbar">
             <span class="pill"
-                >Conduit: <strong class="mono">0.0.1</strong></span
+                >Conduit: <strong class="mono">0.0.3</strong></span
             >
         </div>
     </header>
@@ -42,8 +48,13 @@ header {
 
 .brand {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    gap: 10px;
+}
+.logo {
+    height: 32px;
+    width: auto;
+    object-fit: contain;
 }
 .brand h1 {
     margin: 0;

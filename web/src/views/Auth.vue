@@ -7,12 +7,20 @@
             </div>
 
             <button
-                v-if="jwt"
+                v-if="jwt && !isMockMode"
                 class="createBtn"
                 :disabled="busy"
                 @click="checkLedgerStatusBackend"
             >
                 Check Ledger (Backend)
+            </button>
+
+            <button
+                v-if="jwt"
+                :disabled="busy"
+                @click="disconnect"
+            >
+                Disconnect
             </button>
 
             <div class="pillbar">
@@ -27,6 +35,9 @@
                                   : "DISCONNECTED"
                         }}
                     </strong>
+                </span>
+                <span class="pill" v-if="isMockMode" style="background: #ffa50020; border-color: #ffa500; color: #ffa500;">
+                    <strong>DEMO MODE</strong>
                 </span>
             </div>
         </div>
@@ -122,6 +133,8 @@ const busy = ref(false);
 const error = ref("");
 const jwt = ref(localStorage.getItem("jwt") || "");
 const isInitialized = ref(false);
+// Detect if a previous session stored a mock token
+const isMockMode = ref(jwt.value.startsWith("mock."));
 
 /* =====================
    WALLET
@@ -210,36 +223,122 @@ async function verifySignature(payload) {
 }
 
 /* =====================
+   MOCK MODE (for demos without backend)
+===================== */
+
+function createMockJWT(wallet_key) {
+    // Create a simple mock JWT-like token for demo purposes
+    // Format: mock.{base64(wallet_key)}.{timestamp}
+    const payload = {
+        wallet_key,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 86400, // 24 hours
+    };
+    const encoded = btoa(JSON.stringify(payload));
+    return `mock.${encoded}.${Date.now()}`;
+}
+
+function isBackendError(err) {
+    // Detect any failure that indicates the backend is unreachable:
+    // - True network errors (TypeError / "Failed to fetch")
+    // - Vite proxy errors (returns 500/502 → our code throws "Challenge failed")
+    // - Connection refused passed through in any form
+    const msg = (err?.message || "").toLowerCase();
+    return (
+        msg.includes("failed to fetch") ||
+        msg.includes("networkerror") ||
+        msg.includes("econnrefused") ||
+        msg.includes("challenge failed") ||
+        msg.includes("verify failed") ||
+        err?.name === "TypeError"
+    );
+}
+
+/* =====================
+   DISCONNECT
+===================== */
+
+function disconnect() {
+    jwt.value = "";
+    isMockMode.value = false;
+    isInitialized.value = false;
+    error.value = "";
+    localStorage.removeItem("jwt");
+
+    try {
+        const phantom = getProvider();
+        phantom.disconnect();
+    } catch {
+        // Phantom not available — that's fine
+    }
+}
+
+/* =====================
    AUTH FLOW
 ===================== */
 
 async function connectWalletAndAuth() {
     busy.value = true;
     error.value = "";
+    isMockMode.value = false;
 
     try {
         const phantom = getProvider();
         await phantom.connect();
 
         const wallet_key = phantom.publicKey.toString();
-        const ch = await getChallenge(wallet_key);
 
-        const msgBytes = new TextEncoder().encode(ch.message);
-        const signed = await phantom.signMessage(msgBytes, "utf8");
+        // Try real backend auth first
+        try {
+            const ch = await getChallenge(wallet_key);
 
-        const data = await verifySignature({
-            wallet_key,
-            nonce: ch.nonce,
-            message: ch.message,
-            signature: bs58.encode(signed.signature),
-        });
+            const msgBytes = new TextEncoder().encode(ch.message);
+            const signed = await phantom.signMessage(msgBytes, "utf8");
 
-        jwt.value = data.token;
-        localStorage.setItem("jwt", data.token);
+            const data = await verifySignature({
+                wallet_key,
+                nonce: ch.nonce,
+                message: ch.message,
+                signature: bs58.encode(signed.signature),
+            });
 
-        await createUser(wallet_key);
+            jwt.value = data.token;
+            localStorage.setItem("jwt", data.token);
 
-        isInitialized.value = await checkInitialized(phantom.publicKey);
+            // Try to create user (ignore if backend unavailable)
+            try {
+                await createUser(wallet_key);
+            } catch (e) {
+                console.warn("User creation skipped:", e?.message);
+            }
+
+            isInitialized.value = await checkInitialized(phantom.publicKey);
+        } catch (backendError) {
+            // If backend is unavailable, fall back to mock mode for demo
+            if (isBackendError(backendError)) {
+                console.warn(
+                    "Backend unavailable — falling back to demo mode.",
+                    backendError?.message,
+                );
+                isMockMode.value = true;
+
+                const mockToken = createMockJWT(wallet_key);
+                jwt.value = mockToken;
+                localStorage.setItem("jwt", mockToken);
+
+                // On-chain check still works via Solana RPC (no backend needed)
+                try {
+                    isInitialized.value = await checkInitialized(
+                        phantom.publicKey,
+                    );
+                } catch {
+                    isInitialized.value = false;
+                }
+            } else {
+                // Real error (e.g. user rejected Phantom prompt), re-throw
+                throw backendError;
+            }
+        }
     } catch (e) {
         error.value = e?.message || String(e);
     } finally {
