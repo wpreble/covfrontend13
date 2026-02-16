@@ -41,11 +41,11 @@ The Vite dev server proxies these paths to the backend at `http://localhost:3000
 
 ### Views / Pages
 - **Auth** (`/sign`) — Login/wallet authentication page
-- **Agents** (`/agents`) — AI agent management dashboard
+- **Agents** (`/agents`) — Agent management with Covenant-themed agents (Covenant Claw CMO, Growth Hacker, Sentinel, Micro Chat, Ops Automator). FAB button opens Deploy Agent modal with template selection, conduit code upload, compute selection, and endpoint generation.
 - **Payments** (`/payments`) — Payment/billing interface
-- **Compute** (`/compute`) — Compute resource management
-- **Build** (`/build`) — Build/deployment interface
-- Legacy `/command` redirects to `/compute`
+- **Compute** (`/compute`) — Compute resource management with Deploy/Command tabs
+- **CovenantClaw** (`/covenantclaw`) — Autonomous AI assistant with 3-phase flow (Welcome, Onboarding, Active chat) and Monitor tab with real-time system logs
+- Legacy `/command` redirects to `/compute`, `/build` redirects to `/covenantclaw`
 
 ### Development Server
 - Runs on port **5000** with host `0.0.0.0` (accessible externally)
@@ -61,7 +61,8 @@ web/
 │   ├── idl/              # Solana Anchor IDL definitions
 │   ├── router/index.ts   # Route definitions with auth guards
 │   ├── stores/           # Pinia state stores
-│   └── views/            # Page components (Agents, Payments, Compute, Build, Auth)
+│   ├── components/       # AgentCreate, AgentDetail, AgentEditModal, Header
+│   └── views/            # Page components (Agents, Payments, Compute, CovenantClaw, Auth)
 ├── index.html            # HTML entry point
 ├── vite.config.ts        # Vite configuration with proxy setup
 └── package.json          # Dependencies and scripts

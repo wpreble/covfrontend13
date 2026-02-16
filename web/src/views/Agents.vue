@@ -3,7 +3,7 @@
         <div class="pagehead">
             <div>
                 <h2>Agents</h2>
-                <p>Python agents deployed on serverless.</p>
+                <p>Sovereign AI agents deployed on dedicated compute.</p>
             </div>
 
             <div class="pillbar">
@@ -20,17 +20,18 @@
         </div>
 
         <section class="grid" aria-label="Agent cards">
-            <article class="card" v-for="a in agents" :key="a.id">
+            <article class="card" v-for="a in agents" :key="a.id" @click="openDetail(a)">
                 <div class="cardtop">
                     <div class="titleblock">
                         <h3 class="agentname">{{ a.name }}</h3>
+                        <div class="agent-role" v-if="a.role">{{ a.role }}</div>
 
                         <div class="subline">
                             <span
                                 >GPU:
                                 <span class="mono">{{ a.gpu }}</span></span
                             >
-                            <span>•</span>
+                            <span>&middot;</span>
                             <span>
                                 Price/hr:
                                 <span class="mono">{{
@@ -45,7 +46,7 @@
                                 <strong>{{ a.state.toUpperCase() }}</strong>
                             </span>
                             <span class="pill">
-                                Conduit: <strong class="mono">0.0.1</strong>
+                                Conduit: <strong class="mono">{{ a.conduitVersion }}</strong>
                             </span>
                         </div>
                     </div>
@@ -77,7 +78,7 @@
                     </div>
                 </div>
 
-                <div class="actions">
+                <div class="actions" @click.stop>
                     <div class="leftActions">
                         <button class="ghost" @click="logs(a)" title="logs">
                             Logs
@@ -109,31 +110,24 @@
                 </div>
             </article>
 
-            <div v-if="agents.length === 0" class="card">
+            <div v-if="agents.length === 0" class="card empty-card">
                 <h3 class="agentname" style="margin: 0 0 8px">No agents</h3>
                 <p class="tiny" style="margin: 0">
-                    All agents have been destroyed.
+                    Deploy your first agent to get started.
                 </p>
             </div>
         </section>
 
-        <!-- Floating create prompt -->
-        <div class="composerWrap" aria-label="Create agent prompt">
-            <div class="composer">
-                <input
-                    type="text"
-                    v-model="createPrompt"
-                    placeholder="create new agent"
-                    aria-label="Create new agent"
-                />
-                <button class="createBtn" @click="create()" title="create">
-                    Create
-                </button>
-            </div>
-        </div>
+        <button class="fab" @click="showCreate = true" title="Create Agent">
+            <span class="fab-icon">+</span>
+        </button>
     </div>
 
-    <AgentCreate />
+    <AgentCreate
+        :open="showCreate"
+        @close="showCreate = false"
+        @deployed="onDeployed"
+    />
 
     <AgentEditModal
         :open="!!editingId"
@@ -142,49 +136,108 @@
         @redeploy="(payload) => console.log('redeploy', payload)"
         @test="(payload) => console.log('test', payload)"
     />
+
+    <AgentDetail
+        :open="!!detailAgent"
+        :agent="detailAgent"
+        @close="detailAgent = null"
+    />
 </template>
 
 <script setup>
 import { computed, ref } from "vue";
 import AgentEditModal from "@/components/AgentEditModal.vue";
 import AgentCreate from "@/components/AgentCreate.vue";
+import AgentDetail from "@/components/AgentDetail.vue";
+
+const showCreate = ref(false);
+const detailAgent = ref(null);
 
 const agents = ref([
     {
         id: "ag_001",
-        name: "Indexer",
-        gpu: "NVIDIA A10G",
-        pricePerHour: 0.62,
+        name: "Covenant Claw CMO",
+        role: "Marketing Manager",
+        gpu: "NVIDIA H100 SXM 80GB",
+        pricePerHour: 3.50,
+        requestsCompleted: 24891,
+        tokensProcessed: 198344121,
+        avgLatencyMs: 142,
+        state: "running",
+        region: "us-west-2",
+        runtime: "dedicated",
+        conduitVersion: "1.2.0",
+        template: "covenant-claw",
+        endpoint: "https://api.covenant.cloud/v1/agents/ag_001",
+        apiKey: "cvnt_live_sk_a1b2c3d4e5f6...",
+    },
+    {
+        id: "ag_002",
+        name: "Growth Hacker",
+        role: "SEO & Content Automation",
+        gpu: "NVIDIA A100 80GB",
+        pricePerHour: 2.90,
         requestsCompleted: 12438,
         tokensProcessed: 98344121,
         avgLatencyMs: 182,
         state: "running",
         region: "us-east-1",
-        runtime: "serverless",
-    },
-    {
-        id: "ag_002",
-        name: "RAG Router",
-        gpu: "NVIDIA L4",
-        pricePerHour: 0.48,
-        requestsCompleted: 8031,
-        tokensProcessed: 62190455,
-        avgLatencyMs: 247,
-        state: "running",
-        region: "us-west-2",
-        runtime: "serverless",
+        runtime: "dedicated",
+        conduitVersion: "1.0.3",
+        template: "growth-hacker",
+        endpoint: "https://api.covenant.cloud/v1/agents/ag_002",
+        apiKey: "cvnt_live_sk_g7h8i9j0k1l2...",
     },
     {
         id: "ag_003",
-        name: "Report Writer",
-        gpu: "NVIDIA A100 80GB",
-        pricePerHour: 2.9,
-        requestsCompleted: 2117,
-        tokensProcessed: 15890332,
-        avgLatencyMs: 611,
-        state: "halted",
+        name: "Sentinel",
+        role: "System Monitor & Logging",
+        gpu: "NVIDIA L4",
+        pricePerHour: 0.48,
+        requestsCompleted: 89031,
+        tokensProcessed: 62190455,
+        avgLatencyMs: 67,
+        state: "running",
+        region: "us-west-2",
+        runtime: "dedicated",
+        conduitVersion: "0.9.1",
+        template: "growth-stack",
+        endpoint: "https://api.covenant.cloud/v1/agents/ag_003",
+        apiKey: "cvnt_live_sk_m3n4o5p6q7r8...",
+    },
+    {
+        id: "ag_004",
+        name: "Micro Chat",
+        role: "Lightweight Conversational Agent",
+        gpu: "NVIDIA A10G",
+        pricePerHour: 0.62,
+        requestsCompleted: 31220,
+        tokensProcessed: 45890332,
+        avgLatencyMs: 98,
+        state: "running",
         region: "eu-central-1",
-        runtime: "serverless",
+        runtime: "dedicated",
+        conduitVersion: "1.1.0",
+        template: "micro-chat",
+        endpoint: "https://api.covenant.cloud/v1/agents/ag_004",
+        apiKey: "cvnt_live_sk_s9t0u1v2w3x4...",
+    },
+    {
+        id: "ag_005",
+        name: "Ops Automator",
+        role: "DevOps & Infrastructure Agent",
+        gpu: "NVIDIA L4",
+        pricePerHour: 0.48,
+        requestsCompleted: 5417,
+        tokensProcessed: 15890332,
+        avgLatencyMs: 211,
+        state: "halted",
+        region: "us-east-1",
+        runtime: "dedicated",
+        conduitVersion: "0.8.2",
+        template: "ops-automator",
+        endpoint: "https://api.covenant.cloud/v1/agents/ag_005",
+        apiKey: "cvnt_live_sk_y5z6a7b8c9d0...",
     },
 ]);
 
@@ -196,8 +249,6 @@ const runningCount = computed(
 const haltedCount = computed(
     () => agents.value.filter((a) => a.state === "halted").length,
 );
-
-const createPrompt = ref("");
 
 function fmtUSD(n) {
     return `$${Number(n).toFixed(2)}`;
@@ -225,19 +276,21 @@ function logs(agent) {
     console.log("logs", agent.id);
 }
 
-function create() {
-    console.log("create new agent prompt:", createPrompt.value);
-    createPrompt.value = "";
+function openDetail(agent) {
+    detailAgent.value = agent;
+}
+
+function onDeployed(newAgent) {
+    agents.value.unshift(newAgent);
+    showCreate.value = false;
 }
 </script>
 
 <style scoped>
-/* Only styles used by elements in THIS component */
-
 .wrap {
     max-width: 980px;
     margin: 0 auto;
-    padding: 28px 18px 100px; /* room for floating composer */
+    padding: 28px 18px 100px;
 }
 
 .pagehead {
@@ -306,6 +359,19 @@ function create() {
     border-radius: 16px;
     padding: 18px;
     background: var(--card);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.card:hover {
+    border-color: color-mix(in oklab, var(--fg) 40%, var(--border));
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+.empty-card {
+    cursor: default;
+}
+.empty-card:hover {
+    border-color: var(--border);
+    box-shadow: none;
 }
 
 .cardtop {
@@ -317,13 +383,18 @@ function create() {
 
 .titleblock {
     display: grid;
-    gap: 6px;
+    gap: 4px;
 }
 .agentname {
     margin: 0;
     font-size: 15px;
     font-weight: 600;
     letter-spacing: 0.2px;
+}
+.agent-role {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: -2px;
 }
 .subline {
     display: flex;
@@ -342,9 +413,7 @@ function create() {
 }
 @media (max-width: 520px) {
     .meta {
-        grid-template-columns:
-            1frica,
-            crypto scam chooses you;
+        grid-template-columns: 1fr;
     }
 }
 
@@ -439,48 +508,35 @@ button.ghost:hover {
     text-align: right;
 }
 
-/* Floating composer */
-.composerWrap {
+/* FAB */
+.fab {
     position: fixed;
-    left: 50%;
-    bottom: 18px;
-    transform: translateX(-50%);
-    width: min(740px, calc(100% - 28px));
-    z-index: 50;
-}
-.composer {
+    bottom: 28px;
+    right: 28px;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
     border: 1px solid var(--border);
-    background: var(--card);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 999px;
-    padding: 8px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-}
-.composer input {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    outline: none;
-    font-size: 14px;
-    background: var(--input-bg);
-    color: var(--fg);
-}
-.composer input::placeholder {
-    color: var(--muted);
-}
-
-.createBtn {
-    border: 1px solid var(--fg);
     background: var(--fg);
-    color: var(--btn-primary-fg);
+    color: var(--bg);
+    font-size: 28px;
+    font-weight: 300;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    z-index: 50;
+    padding: 0;
 }
-.createBtn:hover {
-    background: var(--btn-primary-bg);
+.fab:hover {
+    transform: scale(1.08);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
     border-color: var(--fg);
+}
+.fab-icon {
+    line-height: 1;
+    margin-top: -2px;
 }
 </style>

@@ -1,4 +1,3 @@
-<!-- src/components/AgentCreateModal.vue -->
 <template>
     <teleport to="body">
         <div
@@ -10,1248 +9,1210 @@
             @click.self="emitClose"
         >
             <div class="modal" tabindex="-1" @keydown.esc="emitClose">
-                <!-- Topbar -->
                 <div class="topbar">
                     <div class="title">
-                        <div class="name">Create Agent</div>
-                        <div class="sub mono">
-                            Choose a template or write a one-sentence prompt
-                        </div>
+                        <div class="name">Deploy Agent</div>
+                        <div class="sub mono">Step {{ step }} of 3</div>
                     </div>
                     <div class="topActions">
-                        <button class="btn ghost" @click="emitClose">
-                            Close
+                        <button class="btn ghost" @click="emitClose">Close</button>
+                        <button
+                            v-if="step < 3"
+                            class="btn primary"
+                            :disabled="!canContinue"
+                            @click="nextStep"
+                        >
+                            Continue
                         </button>
                         <button
+                            v-else
                             class="btn primary"
-                            :disabled="!canPrimary"
-                            @click="primary"
+                            :disabled="deploying"
+                            @click="deploy"
                         >
-                            {{ primaryLabel }}
+                            {{ deploying ? 'Deploying...' : 'Deploy Agent' }}
                         </button>
                     </div>
                 </div>
 
-                <!-- Tabs -->
-                <div
-                    class="tabsBar"
-                    role="tablist"
-                    aria-label="Create agent tabs"
-                >
-                    <button
-                        class="tab"
-                        :class="{ active: tab === 'templates' }"
-                        role="tab"
-                        :aria-selected="tab === 'templates'"
-                        @click="tab = 'templates'"
-                        :disabled="stage !== 'choose' || refineLoading"
-                    >
-                        Templates
-                    </button>
-                    <button
-                        class="tab"
-                        :class="{ active: tab === 'prompt' }"
-                        role="tab"
-                        :aria-selected="tab === 'prompt'"
-                        @click="tab = 'prompt'"
-                        :disabled="stage !== 'choose' || refineLoading"
-                    >
-                        Prompt
-                    </button>
-
-                    <button
-                        v-if="stage !== 'choose'"
-                        class="tab"
-                        :class="{ active: tab === 'refine' }"
-                        role="tab"
-                        :aria-selected="tab === 'refine'"
-                        @click="tab = 'refine'"
-                        :disabled="stage !== 'refine'"
-                    >
-                        Refine
-                    </button>
-
-                    <button
-                        v-if="stage === 'code'"
-                        class="tab"
-                        :class="{ active: tab === 'code' }"
-                        role="tab"
-                        :aria-selected="tab === 'code'"
-                        @click="tab = 'code'"
-                    >
-                        Code
-                    </button>
+                <div class="stepper">
+                    <div class="step-item" :class="{ active: step >= 1, done: step > 1 }">
+                        <span class="step-num">1</span>
+                        <span class="step-label">Source</span>
+                    </div>
+                    <div class="step-line" :class="{ active: step > 1 }"></div>
+                    <div class="step-item" :class="{ active: step >= 2, done: step > 2 }">
+                        <span class="step-num">2</span>
+                        <span class="step-label">Compute</span>
+                    </div>
+                    <div class="step-line" :class="{ active: step > 2 }"></div>
+                    <div class="step-item" :class="{ active: step >= 3 }">
+                        <span class="step-num">3</span>
+                        <span class="step-label">Review & Deploy</span>
+                    </div>
                 </div>
 
-                <!-- Body -->
                 <div class="body">
-                    <!-- Templates -->
-                    <section
-                        v-if="tab === 'templates'"
-                        class="panel"
-                        role="tabpanel"
-                    >
-                        <div class="panelHead">
-                            <div class="panelTitle">Pick a template</div>
-                            <div class="hint">
-                                Choose a model, then select a template
-                            </div>
+                    <!-- STEP 1: Source Selection -->
+                    <div v-if="step === 1" class="panel">
+                        <div class="source-toggle">
+                            <button
+                                class="source-btn"
+                                :class="{ active: sourceMode === 'template' }"
+                                @click="sourceMode = 'template'"
+                            >
+                                Select Template
+                            </button>
+                            <button
+                                class="source-btn"
+                                :class="{ active: sourceMode === 'upload' }"
+                                @click="sourceMode = 'upload'"
+                            >
+                                Upload Conduit Code
+                            </button>
                         </div>
 
-                        <div class="panelScroll">
-                            <!-- Model selector -->
-                            <div class="modelSection">
-                                <div class="modelTabs">
-                                    <button
-                                        class="modelTab"
-                                        :class="{ active: modelCategory === 'standard' }"
-                                        @click="modelCategory = 'standard'; selectedModelId = 'gpt-4o'"
-                                    >
-                                        Standard
-                                    </button>
-                                    <button
-                                        class="modelTab"
-                                        :class="{ active: modelCategory === 'finetuned' }"
-                                        @click="modelCategory = 'finetuned'; selectedModelId = 'ft-qwen3-covenant'"
-                                    >
-                                        Fine-tuned
-                                    </button>
-                                </div>
-
-                                <div class="modelList">
-                                    <button
-                                        v-for="m in activeModels"
-                                        :key="m.id"
-                                        class="modelRow"
-                                        :class="{ selected: selectedModelId === m.id }"
-                                        @click="selectedModelId = m.id"
-                                    >
-                                        <div class="modelName">{{ m.name }}</div>
-                                        <div class="modelMeta mono">
-                                            <span>{{ m.params }}</span>
-                                            <span>{{ m.ctx }} ctx</span>
-                                            <span>{{ m.costPerMTok }}/MTok</span>
-                                        </div>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div
-                                class="grid"
-                                role="list"
-                                aria-label="Template tiles"
-                            >
+                        <div v-if="sourceMode === 'template'" class="template-section">
+                            <div class="section-label">Template Library</div>
+                            <div class="template-grid">
                                 <button
                                     v-for="t in templates"
                                     :key="t.id"
-                                    class="tile"
-                                    role="listitem"
-                                    :class="{
-                                        selected: selectedTemplateId === t.id,
-                                    }"
-                                    @click="selectTemplate(t.id)"
-                                    type="button"
+                                    class="template-card"
+                                    :class="{ selected: selectedTemplate === t.id }"
+                                    @click="selectedTemplate = t.id"
                                 >
-                                    <div class="tileInner">
-                                        <div class="tileTop">
-                                            <div class="tileTitle">
-                                                {{ t.title }}
-                                            </div>
-                                            <div class="tileCost mono">
-                                                ${{
-                                                    t.costPerHour.toFixed(2)
-                                                }}/hr
-                                            </div>
-                                        </div>
-                                        <div class="tileDesc">{{ t.desc }}</div>
-                                        <div class="tileMeta mono">
-                                            {{ t.family }}
+                                    <div class="tpl-icon">{{ t.icon }}</div>
+                                    <div class="tpl-info">
+                                        <div class="tpl-name">{{ t.name }}</div>
+                                        <div class="tpl-desc">{{ t.desc }}</div>
+                                        <div class="tpl-tags">
+                                            <span class="tpl-tag mono" v-for="tag in t.tags" :key="tag">{{ tag }}</span>
                                         </div>
                                     </div>
+                                    <div v-if="selectedTemplate === t.id" class="tpl-check">&#10003;</div>
                                 </button>
                             </div>
                         </div>
 
-                        <div class="panelFooter">
-                            <div class="tiny mono">
-                                Tip: use Prompt if you want something custom.
+                        <div v-if="sourceMode === 'upload'" class="upload-section">
+                            <div class="section-label">Upload Conduit Code</div>
+                            <div
+                                class="drop-zone"
+                                :class="{ dragover: isDragging, uploaded: uploadedFile }"
+                                @dragover.prevent="isDragging = true"
+                                @dragleave.prevent="isDragging = false"
+                                @drop.prevent="onDrop"
+                                @click="triggerUpload"
+                            >
+                                <template v-if="!uploadedFile">
+                                    <div class="drop-icon">&#128193;</div>
+                                    <div class="drop-title">Drag & drop your .zip file here</div>
+                                    <div class="drop-hint mono">or click to browse</div>
+                                    <div class="drop-formats mono">Accepted: .zip containing your Conduit agent code</div>
+                                </template>
+                                <template v-else>
+                                    <div class="drop-icon">&#9989;</div>
+                                    <div class="drop-title">{{ uploadedFile.name }}</div>
+                                    <div class="drop-hint mono">{{ formatSize(uploadedFile.size) }}</div>
+                                    <button class="remove-file" @click.stop="uploadedFile = null">Remove</button>
+                                </template>
                             </div>
-                            <div class="footerActions">
+                            <input
+                                ref="fileInput"
+                                type="file"
+                                accept=".zip"
+                                style="display: none"
+                                @change="onFileSelect"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Compute Selection -->
+                    <div v-if="step === 2" class="panel">
+                        <div class="section-label">Select Compute</div>
+
+                        <div class="compute-options">
+                            <button
+                                class="compute-option"
+                                :class="{ selected: computeMode === 'new' }"
+                                @click="computeMode = 'new'"
+                            >
+                                <div class="co-icon">&#9889;</div>
+                                <div class="co-info">
+                                    <div class="co-name">Deploy New Compute</div>
+                                    <div class="co-desc">Provision a new dedicated GPU for this agent</div>
+                                </div>
+                            </button>
+                            <button
+                                class="compute-option"
+                                :class="{ selected: computeMode === 'existing' }"
+                                @click="computeMode = 'existing'"
+                            >
+                                <div class="co-icon">&#128279;</div>
+                                <div class="co-info">
+                                    <div class="co-name">Select Deployed Compute</div>
+                                    <div class="co-desc">Use an existing GPU deployment</div>
+                                </div>
+                            </button>
+                            <button
+                                class="compute-option"
+                                :class="{ selected: computeMode === 'api' }"
+                                @click="computeMode = 'api'"
+                            >
+                                <div class="co-icon">&#9729;&#65039;</div>
+                                <div class="co-info">
+                                    <div class="co-name">API-Based</div>
+                                    <div class="co-desc">Use external API provider (OpenAI, Anthropic, etc.)</div>
+                                </div>
+                                <div class="co-warning">Less Secure</div>
+                            </button>
+                        </div>
+
+                        <div v-if="computeMode === 'api'" class="api-warning">
+                            <div class="warn-icon">&#9888;&#65039;</div>
+                            <div class="warn-text">
+                                API-based compute routes your data through third-party servers. For full data sovereignty and privacy, use dedicated GPU compute instead.
+                            </div>
+                        </div>
+
+                        <!-- New compute: Model + GPU selection -->
+                        <template v-if="computeMode === 'new'">
+                            <div class="section-label" style="margin-top: 18px">Recommended Models</div>
+                            <div class="model-tabs">
                                 <button
-                                    class="btn ghost"
-                                    @click="tab = 'prompt'"
-                                >
-                                    Use Prompt
-                                </button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Prompt -->
-                    <section
-                        v-else-if="tab === 'prompt'"
-                        class="panel"
-                        role="tabpanel"
-                    >
-                        <div class="panelHead">
-                            <div class="panelTitle">One-sentence prompt</div>
-                            <div class="hint">
-                                No extras — just describe the job (press Enter
-                                to continue)
-                            </div>
-                        </div>
-
-                        <div class="panelScroll">
-                            <div class="promptWrap">
-                                <div class="promptBox">
-                                    <textarea
-                                        v-model="prompt"
-                                        class="prompt"
-                                        rows="6"
-                                        placeholder='e.g. "Summarize support tickets"'
-                                        spellcheck="false"
-                                        :disabled="refineLoading"
-                                        @keydown.enter.exact.prevent="
-                                            onPromptEnter
-                                        "
-                                        @keydown.enter.shift.stop
-                                    />
-                                    <div
-                                        v-if="refineLoading"
-                                        class="promptOverlay"
-                                        aria-label="Loading"
-                                    >
-                                        <div class="spinner" />
-                                        <div class="mono tiny subtle">
-                                            Generating questions…
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="promptHelp mono">
-                                    Examples: “Extract invoice fields from PDFs”
-                                    · “Watch a folder and classify files”
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="panelFooter">
-                            <div class="tiny mono subtle">
-                                Keep it short. Press Enter to continue.
-                            </div>
-                            <div class="footerActions">
+                                    class="mtab"
+                                    :class="{ active: modelCategory === 'general' }"
+                                    @click="modelCategory = 'general'"
+                                >General</button>
                                 <button
-                                    class="btn ghost"
-                                    @click="tab = 'templates'"
-                                    :disabled="refineLoading"
-                                >
-                                    Browse Templates
-                                </button>
+                                    class="mtab"
+                                    :class="{ active: modelCategory === 'finetuned' }"
+                                    @click="modelCategory = 'finetuned'"
+                                >Fine-tuned</button>
                             </div>
-                        </div>
-                    </section>
-
-                    <!-- Refine -->
-                    <section
-                        v-else-if="tab === 'refine'"
-                        class="panel"
-                        role="tabpanel"
-                    >
-                        <div class="panelHead">
-                            <div class="panelTitle">Refine</div>
-                            <div class="hint">
-                                Answer a few questions to shape the agent
-                            </div>
-                        </div>
-
-                        <div class="panelScroll">
-                            <div v-if="refineLoading" class="skeletonWrap">
-                                <div class="skeleton" />
-                                <div class="skeleton" />
-                                <div class="skeleton" />
-                                <div class="spinnerRow">
-                                    <div class="spinner" />
-                                    <div class="mono tiny subtle">
-                                        Waiting for refine service…
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div v-else class="refineWrap">
-                                <div
-                                    v-if="!refineSchema"
-                                    class="tiny mono subtle"
-                                >
-                                    No questions yet.
-                                </div>
-
-                                <div v-else class="qList">
-                                    <div
-                                        v-for="q in refineSchema.questions"
-                                        :key="q.id"
-                                        class="qRow"
-                                    >
-                                        <div class="qLabel">
-                                            <div class="qTitle">
-                                                {{ q.label }}
-                                                <span
-                                                    v-if="q.required"
-                                                    class="req mono"
-                                                    >*</span
-                                                >
-                                            </div>
-                                            <div
-                                                v-if="q.help"
-                                                class="qHelp mono"
-                                            >
-                                                {{ q.help }}
-                                            </div>
-                                        </div>
-
-                                        <!-- ALL QUESTIONS = TEXT INPUTS -->
-                                        <input
-                                            class="qInput"
-                                            type="text"
-                                            :placeholder="q.placeholder || ''"
-                                            v-model="answers[q.id]"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="panelFooter">
-                            <div class="tiny mono subtle">
-                                Fill required fields, then continue.
-                            </div>
-                            <div class="footerActions">
-                                <button class="btn ghost" @click="backToPrompt">
-                                    Back to Prompt
-                                </button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Code -->
-                    <section v-else class="panel" role="tabpanel">
-                        <div class="panelHead">
-                            <div class="panelTitle">Code</div>
-                            <div class="hint">
-                                Generated python · run a dry test before deploy
-                            </div>
-                        </div>
-
-                        <div class="panelScroll">
-                            <div class="codeWrap">
-                                <pre
-                                    class="codeBlock mono"
-                                ><code>{{ code }}</code></pre>
-
-                                <div class="codeActions">
-                                    <button
-                                        class="btn ghost"
-                                        @click="test"
-                                        :disabled="testLoading || !code"
-                                    >
-                                        {{ testLoading ? "Testing…" : "Test" }}
-                                    </button>
-
-                                    <button
-                                        class="btn primary"
-                                        @click="deploy"
-                                        :disabled="!testPassed || deployLoading"
-                                    >
-                                        {{
-                                            deployLoading
-                                                ? "Deploying…"
-                                                : "Deploy"
-                                        }}
-                                    </button>
-                                </div>
-
-                                <div
-                                    v-if="testStatus"
-                                    class="status mono"
-                                    :class="{ ok: testPassed }"
-                                >
-                                    {{ testStatus }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="panelFooter">
-                            <div class="tiny mono subtle">
-                                Test must succeed before deploy.
-                            </div>
-                            <div class="footerActions">
+                            <div class="model-list">
                                 <button
-                                    class="btn ghost"
-                                    @click="tab = 'refine'"
-                                    :disabled="stage !== 'code'"
+                                    v-for="m in activeModels"
+                                    :key="m.id"
+                                    class="model-row"
+                                    :class="{ selected: selectedModel === m.id }"
+                                    @click="selectedModel = m.id"
                                 >
-                                    Back to Refine
+                                    <div class="mr-name">{{ m.name }}</div>
+                                    <div class="mr-meta mono">
+                                        <span>{{ m.params }}</span>
+                                        <span>{{ m.ctx }}</span>
+                                        <span>{{ m.gpu }}</span>
+                                    </div>
                                 </button>
                             </div>
+
+                            <div class="section-label" style="margin-top: 18px">Region</div>
+                            <div class="region-row">
+                                <button
+                                    v-for="r in regions"
+                                    :key="r.id"
+                                    class="region-btn"
+                                    :class="{ selected: selectedRegion === r.id }"
+                                    @click="selectedRegion = r.id"
+                                >
+                                    <span>{{ r.flag }}</span>
+                                    <span>{{ r.name }}</span>
+                                </button>
+                            </div>
+                        </template>
+
+                        <!-- Existing compute -->
+                        <template v-if="computeMode === 'existing'">
+                            <div class="section-label" style="margin-top: 18px">Active Deployments</div>
+                            <div class="deploy-list">
+                                <button
+                                    v-for="d in existingDeploys"
+                                    :key="d.id"
+                                    class="deploy-row"
+                                    :class="{ selected: selectedDeploy === d.id }"
+                                    @click="selectedDeploy = d.id"
+                                >
+                                    <div class="dr-left">
+                                        <div class="dr-name">{{ d.model }}</div>
+                                        <div class="dr-info mono">{{ d.gpu }} &middot; {{ d.region }}</div>
+                                    </div>
+                                    <div class="dr-status" :class="d.status">{{ d.status }}</div>
+                                </button>
+                            </div>
+                        </template>
+
+                        <!-- API-based model -->
+                        <template v-if="computeMode === 'api'">
+                            <div class="section-label" style="margin-top: 18px">API Provider</div>
+                            <div class="model-list">
+                                <button
+                                    v-for="m in apiModels"
+                                    :key="m.id"
+                                    class="model-row"
+                                    :class="{ selected: selectedApiModel === m.id }"
+                                    @click="selectedApiModel = m.id"
+                                >
+                                    <div class="mr-name">{{ m.name }}</div>
+                                    <div class="mr-meta mono">
+                                        <span>{{ m.provider }}</span>
+                                        <span>{{ m.cost }}</span>
+                                    </div>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- STEP 3: Review & Deploy -->
+                    <div v-if="step === 3" class="panel">
+                        <div class="section-label">Review Configuration</div>
+
+                        <div class="review-grid">
+                            <div class="review-item">
+                                <div class="rv-label">Agent Source</div>
+                                <div class="rv-value">
+                                    <template v-if="sourceMode === 'template'">
+                                        {{ templates.find(t => t.id === selectedTemplate)?.name || '—' }}
+                                    </template>
+                                    <template v-else>
+                                        {{ uploadedFile?.name || 'Custom Upload' }}
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="review-item">
+                                <div class="rv-label">Compute</div>
+                                <div class="rv-value">
+                                    <template v-if="computeMode === 'new'">
+                                        New &mdash; {{ activeModels.find(m => m.id === selectedModel)?.name || '—' }}
+                                    </template>
+                                    <template v-else-if="computeMode === 'existing'">
+                                        {{ existingDeploys.find(d => d.id === selectedDeploy)?.model || '—' }}
+                                    </template>
+                                    <template v-else>
+                                        API &mdash; {{ apiModels.find(m => m.id === selectedApiModel)?.name || '—' }}
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="review-item" v-if="computeMode === 'new'">
+                                <div class="rv-label">GPU</div>
+                                <div class="rv-value mono">{{ activeModels.find(m => m.id === selectedModel)?.gpu || '—' }}</div>
+                            </div>
+                            <div class="review-item" v-if="computeMode === 'new'">
+                                <div class="rv-label">Region</div>
+                                <div class="rv-value">{{ regions.find(r => r.id === selectedRegion)?.name || '—' }}</div>
+                            </div>
                         </div>
-                    </section>
+
+                        <div class="section-label" style="margin-top: 18px">Agent Name</div>
+                        <input
+                            v-model="agentName"
+                            class="name-input mono"
+                            placeholder="e.g. my-growth-agent"
+                        />
+
+                        <div v-if="computeMode === 'api'" class="api-warning" style="margin-top: 14px">
+                            <div class="warn-icon">&#9888;&#65039;</div>
+                            <div class="warn-text">
+                                This agent will use API-based compute. Your data will be sent to external servers. Consider using dedicated compute for sensitive workloads.
+                            </div>
+                        </div>
+
+                        <div v-if="deploySuccess" class="deploy-result">
+                            <div class="dr-title">Agent Deployed Successfully</div>
+                            <div class="section-label" style="margin-top: 12px">Endpoint</div>
+                            <div class="endpoint-box">
+                                <code class="endpoint-url mono">{{ deployedEndpoint }}</code>
+                                <button class="copy-btn" @click="copyText(deployedEndpoint)">Copy</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div
-                    v-if="toast"
-                    class="toast"
-                    role="status"
-                    aria-live="polite"
-                >
-                    {{ toast }}
+                <div class="footer">
+                    <button v-if="step > 1 && !deploySuccess" class="btn ghost" @click="step--">Back</button>
+                    <div class="footer-spacer"></div>
                 </div>
             </div>
         </div>
     </teleport>
 </template>
 
-<script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+<script setup>
+import { computed, ref } from "vue";
 
-type Template = {
-    id: string;
-    title: string;
-    desc: string;
-    family: string;
-    costPerHour: number;
-};
+const props = defineProps({ open: { type: Boolean, default: false } });
+const emit = defineEmits(["close", "deployed"]);
 
-// ALL QUESTIONS ARE TEXT INPUTS (coming from refine API)
-type RefineQuestion = {
-    id: string;
-    type: "text";
-    label: string;
-    placeholder?: string;
-    help?: string;
-    required?: boolean;
-};
+const step = ref(1);
+const sourceMode = ref("template");
+const selectedTemplate = ref("");
+const uploadedFile = ref(null);
+const isDragging = ref(false);
+const fileInput = ref(null);
 
-type RefineSchema = {
-    schemaId: string;
-    title: string;
-    questions: RefineQuestion[];
-};
+const computeMode = ref("new");
+const modelCategory = ref("general");
+const selectedModel = ref("kimi-25-secure");
+const selectedRegion = ref("us-west-2");
+const selectedDeploy = ref("");
+const selectedApiModel = ref("gpt-4o-api");
 
-const props = defineProps<{ open: boolean }>();
+const agentName = ref("");
+const deploying = ref(false);
+const deploySuccess = ref(false);
+const deployedEndpoint = ref("");
 
-const emit = defineEmits<{
-    (e: "close"): void;
-    (
-        e: "create",
-        payload:
-            | { mode: "template"; templateId: string }
-            | {
-                  mode: "prompt";
-                  prompt: string;
-                  refine?: {
-                      schemaId: string;
-                      answers: Record<string, string>;
-                  };
-                  code?: string;
-              },
-    ): void;
-}>();
-
-const tab = ref<"templates" | "prompt" | "refine" | "code">("templates");
-const stage = ref<"choose" | "refine" | "code">("choose");
-
-const templates = ref<Template[]>([
+const templates = ref([
     {
-        id: "support_summarizer",
-        title: "Support Ticket Summarizer",
-        desc: "Summarize tickets into themes + action items.",
-        family: "summarize",
-        costPerHour: 0.18,
+        id: "covenant-claw",
+        name: "Covenant Claw",
+        icon: "&#129302;",
+        desc: "Full-featured autonomous AI assistant with web browsing, code execution, email, and calendar management.",
+        tags: ["autonomous", "multi-tool", "general"],
     },
     {
-        id: "invoice_extractor",
-        title: "Invoice Field Extractor",
-        desc: "Extract vendor, total, date from PDFs.",
-        family: "extract",
-        costPerHour: 0.26,
+        id: "micro-chat",
+        name: "Micro Chat",
+        icon: "&#128172;",
+        desc: "Lightweight conversational agent for customer support, FAQ, and quick interactions.",
+        tags: ["chat", "lightweight", "fast"],
     },
     {
-        id: "folder_classifier",
-        title: "Folder Watch Classifier",
-        desc: "Watch a folder and classify new files.",
-        family: "watch",
-        costPerHour: 0.14,
+        id: "growth-stack",
+        name: "Growth Stack (Sentinel)",
+        icon: "&#128737;",
+        desc: "System monitoring and logging bot. Tracks events, alerts on anomalies, and generates reports.",
+        tags: ["monitoring", "logging", "alerts"],
     },
     {
-        id: "shell_structurer",
-        title: "Shell Output Structurer",
-        desc: "Run a command and output structured JSON.",
-        family: "shell",
-        costPerHour: 0.1,
+        id: "growth-hacker",
+        name: "Growth Hacker",
+        icon: "&#128640;",
+        desc: "SEO optimization, content generation, social media automation, and growth analytics.",
+        tags: ["marketing", "seo", "automation"],
+    },
+    {
+        id: "ops-automator",
+        name: "Ops Automator",
+        icon: "&#9881;&#65039;",
+        desc: "DevOps and infrastructure automation. CI/CD pipelines, deployments, health checks.",
+        tags: ["devops", "infra", "ci/cd"],
+    },
+    {
+        id: "sales-concierge",
+        name: "Sales Concierge",
+        icon: "&#129309;",
+        desc: "Pipeline management, lead scoring, outreach drafting, and CRM integration.",
+        tags: ["sales", "crm", "outreach"],
     },
 ]);
 
-const selectedTemplateId = ref("");
-const prompt = ref("");
-const toast = ref("");
-
-/* =====================
-   MODEL SELECTION
-===================== */
-
-type Model = {
-    id: string;
-    name: string;
-    params: string;
-    ctx: string;
-    costPerMTok: string;
-};
-
-const modelCategory = ref<"standard" | "finetuned">("standard");
-
-const standardModels: Model[] = [
-    { id: "gpt-4o", name: "GPT-4o", params: "—", ctx: "128k", costPerMTok: "$2.50" },
-    { id: "claude-sonnet-4", name: "Claude Sonnet 4", params: "—", ctx: "200k", costPerMTok: "$3.00" },
-    { id: "kimi-k2", name: "Kimi K2", params: "1T MoE", ctx: "128k", costPerMTok: "$0.60" },
-    { id: "minimax-m1", name: "MiniMax-M1", params: "456B", ctx: "1M", costPerMTok: "$1.10" },
-    { id: "qwen-3-235b", name: "Qwen 3 235B", params: "235B MoE", ctx: "128k", costPerMTok: "$0.80" },
-    { id: "deepseek-v3", name: "DeepSeek V3", params: "671B MoE", ctx: "128k", costPerMTok: "$0.90" },
+const generalModels = [
+    { id: "kimi-25-secure", name: "Kimi K2 (Recommended)", params: "1T MoE", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB" },
+    { id: "qwen-3-235b", name: "Qwen 3 235B", params: "235B MoE", ctx: "128k", gpu: "NVIDIA A100 80GB" },
+    { id: "deepseek-v3", name: "DeepSeek V3", params: "671B MoE", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB" },
+    { id: "llama-4-scout", name: "Llama 4 Scout", params: "109B MoE", ctx: "512k", gpu: "NVIDIA A100 80GB" },
+    { id: "minimax-m1", name: "MiniMax-M1", params: "456B", ctx: "1M", gpu: "NVIDIA H100 SXM 80GB" },
 ];
 
-const finetunedModels: Model[] = [
-    { id: "ft-qwen3-covenant", name: "Qwen 3 235B · Covenant Custom", params: "235B MoE (FT)", ctx: "128k", costPerMTok: "$1.40" },
-    { id: "ft-minimax-m1-ops", name: "MiniMax-M1 · Ops Fine-tune", params: "456B (FT)", ctx: "1M", costPerMTok: "$1.80" },
+const finetunedModels = [
+    { id: "ft-qwen3-covenant", name: "Qwen 3 235B - Covenant Custom", params: "235B MoE (FT)", ctx: "128k", gpu: "NVIDIA A100 80GB" },
+    { id: "ft-minimax-ops", name: "MiniMax-M1 - Ops Fine-tune", params: "456B (FT)", ctx: "1M", gpu: "NVIDIA H100 SXM 80GB" },
+    { id: "ft-kimi-secure", name: "Kimi K2 - Secure Covenant", params: "1T MoE (FT)", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB" },
 ];
-
-const selectedModelId = ref("gpt-4o");
 
 const activeModels = computed(() =>
-    modelCategory.value === "standard" ? standardModels : finetunedModels,
+    modelCategory.value === "general" ? generalModels : finetunedModels,
 );
 
-const refineLoading = ref(false);
-const refineSchema = ref<RefineSchema | null>(null);
-const answers = reactive<Record<string, string>>({});
+const regions = [
+    { id: "us-west-2", name: "US West (Oregon)", flag: "🇺🇸" },
+    { id: "us-east-1", name: "US East (Virginia)", flag: "🇺🇸" },
+    { id: "eu-central-1", name: "EU (Frankfurt)", flag: "🇩🇪" },
+    { id: "ap-northeast-1", name: "Asia Pacific (Tokyo)", flag: "🇯🇵" },
+];
 
-// Code stage (mocked)
-const code = ref("");
-const testLoading = ref(false);
-const testPassed = ref(false);
-const testStatus = ref("");
-const deployLoading = ref(false);
+const existingDeploys = [
+    { id: "dep_001", model: "Kimi K2", gpu: "NVIDIA H100 SXM 80GB", region: "us-west-2", status: "running" },
+    { id: "dep_002", model: "Qwen 3 235B", gpu: "NVIDIA A100 80GB", region: "us-east-1", status: "running" },
+];
 
-const canPrimary = computed(() => {
-    if (refineLoading.value) return false;
+const apiModels = [
+    { id: "gpt-4o-api", name: "GPT-4o", provider: "OpenAI", cost: "$2.50/MTok" },
+    { id: "claude-sonnet-4-api", name: "Claude Sonnet 4", provider: "Anthropic", cost: "$3.00/MTok" },
+    { id: "gemini-2-api", name: "Gemini 2.5 Pro", provider: "Google", cost: "$1.25/MTok" },
+];
 
-    if (stage.value === "choose") {
-        if (tab.value === "templates") return !!selectedTemplateId.value;
-        return prompt.value.trim().length > 0;
+const canContinue = computed(() => {
+    if (step.value === 1) {
+        if (sourceMode.value === "template") return !!selectedTemplate.value;
+        return !!uploadedFile.value;
     }
+    if (step.value === 2) {
+        if (computeMode.value === "new") return !!selectedModel.value && !!selectedRegion.value;
+        if (computeMode.value === "existing") return !!selectedDeploy.value;
+        if (computeMode.value === "api") return !!selectedApiModel.value;
+    }
+    return true;
+});
 
-    if (stage.value === "refine") {
-        if (!refineSchema.value) return false;
-        for (const q of refineSchema.value.questions) {
-            if (q.required && !String(answers[q.id] || "").trim()) return false;
+function nextStep() {
+    if (step.value === 1 && sourceMode.value === "template" && selectedTemplate.value) {
+        const tpl = templates.value.find(t => t.id === selectedTemplate.value);
+        if (tpl && !agentName.value) {
+            agentName.value = tpl.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
         }
-        return true;
     }
-
-    if (stage.value === "code") {
-        // primary in code stage is "Deploy" but only after test passes
-        return testPassed.value && !deployLoading.value;
-    }
-
-    return false;
-});
-
-const primaryLabel = computed(() => {
-    if (stage.value === "choose") return "Create";
-    if (stage.value === "refine") return "Continue";
-    return "Deploy";
-});
+    step.value++;
+}
 
 function emitClose() {
+    step.value = 1;
+    sourceMode.value = "template";
+    selectedTemplate.value = "";
+    uploadedFile.value = null;
+    computeMode.value = "new";
+    selectedModel.value = "kimi-25-secure";
+    selectedRegion.value = "us-west-2";
+    selectedDeploy.value = "";
+    selectedApiModel.value = "gpt-4o-api";
+    agentName.value = "";
+    deploying.value = false;
+    deploySuccess.value = false;
+    deployedEndpoint.value = "";
+    modelCategory.value = "general";
     emit("close");
 }
 
-function selectTemplate(id: string) {
-    selectedTemplateId.value = id;
+function triggerUpload() {
+    fileInput.value?.click();
 }
 
-function backToPrompt() {
-    stage.value = "choose";
-    tab.value = "prompt";
-    refineSchema.value = null;
-    Object.keys(answers).forEach((k) => delete answers[k]);
-}
-
-function onPromptEnter() {
-    // Only act like "submit" in the prompt tab during choose stage.
-    if (stage.value !== "choose" || tab.value !== "prompt") return;
-    if (!prompt.value.trim()) return;
-    void primary();
-}
-
-type AgentCreateRefineRequest = { start_prompt: string };
-type AgentCreateRefineResponse = { code: string };
-
-async function callRefineApi(
-    startPrompt: string,
-): Promise<AgentCreateRefineResponse> {
-    const token = localStorage.getItem("jwt");
-    const res = await fetch("/agents/refine", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-            start_prompt: startPrompt,
-        } satisfies AgentCreateRefineRequest),
-    });
-
-    if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(body || `Refine failed (${res.status})`);
-    }
-
-    const json = (await res.json()) as AgentCreateRefineResponse;
-
-    // Validate shape
-    if (!json || typeof json.code !== "string") {
-        throw new Error("Invalid refine response (expected { code: string })");
-    }
-
-    return json;
-}
-
-function mockCodeLLM(): Promise<string> {
-    // For now, always return hello world
-    return new Promise((resolve) => {
-        window.setTimeout(() => resolve("print('hello world')\n"), 260);
-    });
-}
-
-function mockBackendTest(): Promise<{ ok: boolean; message: string }> {
-    return new Promise((resolve) => {
-        window.setTimeout(
-            () => resolve({ ok: true, message: "Dry run succeeded" }),
-            420,
-        );
-    });
-}
-
-function mockBackendDeploy(): Promise<{ ok: boolean; message: string }> {
-    return new Promise((resolve) => {
-        window.setTimeout(
-            () => resolve({ ok: true, message: "Deployed" }),
-            520,
-        );
-    });
-}
-
-async function primary() {
-    if (!canPrimary.value) return;
-
-    // Templates flow unchanged
-    if (stage.value === "choose" && tab.value === "templates") {
-        emit("create", {
-            mode: "template",
-            templateId: selectedTemplateId.value,
-        });
-        toast.value = "Template selected";
-        window.setTimeout(() => (toast.value = ""), 900);
-        return;
-    }
-
-    // Prompt -> Refine (REAL API)
-    if (stage.value === "choose" && tab.value === "prompt") {
-        refineLoading.value = true;
-        toast.value = "Generating questions…";
-        try {
-            const start = prompt.value.trim();
-            const api = await callRefineApi(start);
-            const schema = toSchemaFromQuestions(api.questions);
-
-            refineSchema.value = schema;
-            Object.keys(answers).forEach((k) => delete answers[k]);
-            for (const q of schema.questions) answers[q.id] = "";
-
-            stage.value = "refine";
-            tab.value = "refine";
-            toast.value = "Questions ready";
-        } catch (e: any) {
-            toast.value = e?.message ? String(e.message) : "Refine failed";
-        } finally {
-            refineLoading.value = false;
-            window.setTimeout(() => (toast.value = ""), 1200);
-        }
-        return;
-    }
-
-    // Refine -> Code (mock LLM codegen)
-    if (stage.value === "refine") {
-        // reset test state when regenerating code
-        testPassed.value = false;
-        testStatus.value = "";
-        testLoading.value = false;
-
-        toast.value = "Generating code…";
-        const gen = await mockCodeLLM();
-        code.value = gen;
-
-        stage.value = "code";
-        tab.value = "code";
-        toast.value = "Code ready";
-        window.setTimeout(() => (toast.value = ""), 900);
-        return;
-    }
-
-    // Code -> Deploy (only if testPassed)
-    if (stage.value === "code" && testPassed.value) {
-        await deploy();
+function onFileSelect(e) {
+    const file = e.target.files[0];
+    if (file && file.name.endsWith(".zip")) {
+        uploadedFile.value = file;
     }
 }
 
-async function test() {
-    if (testLoading.value) return;
-    testLoading.value = true;
-    testStatus.value = "Running dry test…";
-    testPassed.value = false;
-
-    try {
-        const res = await mockBackendTest();
-        if (res.ok) {
-            testPassed.value = true;
-            testStatus.value = "✓ " + res.message;
-        } else {
-            testPassed.value = false;
-            testStatus.value = "✕ " + res.message;
-        }
-    } catch {
-        testPassed.value = false;
-        testStatus.value = "✕ Test failed";
-    } finally {
-        testLoading.value = false;
+function onDrop(e) {
+    isDragging.value = false;
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith(".zip")) {
+        uploadedFile.value = file;
     }
+}
+
+function formatSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / 1048576).toFixed(1) + " MB";
 }
 
 async function deploy() {
-    if (!testPassed.value || deployLoading.value) return;
-    deployLoading.value = true;
-    testStatus.value = "Deploying…";
+    deploying.value = true;
+    await new Promise((r) => setTimeout(r, 2200));
 
-    try {
-        const res = await mockBackendDeploy();
-        if (res.ok) {
-            testStatus.value = "✓ " + res.message;
-            toast.value = "Deployed";
-            // optional: emit final payload
-            emit("create", {
-                mode: "prompt",
-                prompt: prompt.value.trim(),
-                refine: refineSchema.value
-                    ? {
-                          schemaId: refineSchema.value.schemaId,
-                          answers: { ...answers },
-                      }
-                    : undefined,
-                code: code.value,
-            });
-        } else {
-            testStatus.value = "✕ " + res.message;
-        }
-    } catch {
-        testStatus.value = "✕ Deploy failed";
-    } finally {
-        deployLoading.value = false;
-        window.setTimeout(() => (toast.value = ""), 900);
+    const id = "ag_" + String(Date.now()).slice(-6);
+    const tpl = templates.value.find(t => t.id === selectedTemplate.value);
+    const name = agentName.value || (tpl?.name || "custom-agent");
+    const endpoint = `https://api.covenant.cloud/v1/agents/${id}`;
+    deployedEndpoint.value = endpoint;
+    deploySuccess.value = true;
+    deploying.value = false;
+
+    let gpu = "API";
+    let price = 0;
+    let region = "api";
+    let runtime = "api";
+
+    if (computeMode.value === "new") {
+        const model = activeModels.value.find(m => m.id === selectedModel.value);
+        gpu = model?.gpu || "NVIDIA H100 SXM 80GB";
+        price = gpu.includes("H100") ? 3.50 : gpu.includes("A100") ? 2.90 : 0.62;
+        region = selectedRegion.value;
+        runtime = "dedicated";
+    } else if (computeMode.value === "existing") {
+        const dep = existingDeploys.find(d => d.id === selectedDeploy.value);
+        gpu = dep?.gpu || "NVIDIA H100 SXM 80GB";
+        price = gpu.includes("H100") ? 3.50 : 2.90;
+        region = dep?.region || "us-west-2";
+        runtime = "dedicated";
+    } else {
+        const apiModel = apiModels.find(m => m.id === selectedApiModel.value);
+        gpu = `API (${apiModel?.provider || "External"})`;
+        price = 0;
+        region = "cloud";
+        runtime = "api";
     }
+
+    emit("deployed", {
+        id,
+        name,
+        role: tpl?.tags?.[0] ? tpl.tags[0].charAt(0).toUpperCase() + tpl.tags[0].slice(1) : "Custom Agent",
+        gpu,
+        pricePerHour: price,
+        requestsCompleted: 0,
+        tokensProcessed: 0,
+        avgLatencyMs: 0,
+        state: "running",
+        region,
+        runtime,
+        conduitVersion: "1.0.0",
+        template: selectedTemplate.value || "custom",
+        endpoint,
+        apiKey: `cvnt_live_sk_${id}...`,
+    });
+}
+
+async function copyText(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch {}
 }
 </script>
 
 <style scoped>
-/* BLACK / WHITE ONLY. No borders. Big modal. Square tiles. */
-
-/* Overlay + modal */
 .overlay {
     position: fixed;
     inset: 0;
     background: var(--overlay);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     display: grid;
     place-items: center;
-    padding: 22px;
-    z-index: 9999;
-}
-.modal {
-    width: min(1080px, 96vw);
-    height: min(760px, 92vh);
-    background: var(--bg);
-    color: var(--fg);
-    border-radius: 16px;
-    box-shadow: 0 30px 120px rgba(0, 0, 0, 0.7);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    padding: 18px;
+    z-index: 1000;
 }
 
-/* Topbar */
+.modal {
+    width: min(780px, 100%);
+    max-height: 90vh;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-direction: column;
+    outline: none;
+}
+
 .topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 20px;
-    background: var(--bg);
+    gap: 12px;
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
 }
-.title .name {
-    font-size: 18px;
-    font-weight: 700;
+
+.title {
+    display: grid;
+    gap: 3px;
+}
+.name {
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: 0.2px;
 }
-.title .sub {
-    margin-top: 4px;
+.sub {
     font-size: 12px;
-    opacity: 0.7;
+    color: var(--muted);
 }
+
 .topActions {
     display: flex;
     gap: 10px;
+    align-items: center;
 }
 
-/* Tabs */
-.tabsBar {
+.btn {
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--fg);
+    padding: 8px 18px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.btn:hover {
+    border-color: var(--fg);
+}
+.btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+.btn.primary {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+}
+.btn.primary:hover {
+    filter: brightness(1.1);
+}
+.btn.ghost {
+    border-color: var(--border);
+}
+
+/* Stepper */
+.stepper {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 14px 14px;
-    background: var(--bg);
+    gap: 0;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
 }
-.tab {
-    appearance: none;
-    border: 0;
-    background: var(--chip);
-    color: var(--fg);
-    padding: 10px 12px;
-    border-radius: 12px;
+
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.4;
+    transition: opacity 0.15s ease;
+}
+.step-item.active {
+    opacity: 1;
+}
+.step-item.done {
+    opacity: 0.7;
+}
+
+.step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+}
+.step-item.active .step-num {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+}
+
+.step-label {
     font-size: 12px;
-    cursor: pointer;
-    transition:
-        transform 0.06s ease,
-        background 0.12s ease,
-        opacity 0.12s ease;
+    font-weight: 600;
+    white-space: nowrap;
 }
-.tab:hover {
-    background: var(--chip);
+
+.step-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    margin: 0 12px;
+    transition: background 0.15s ease;
 }
-.tab:active {
-    transform: translateY(1px);
-}
-.tab.active {
-    background: var(--chip);
-}
-.tab:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+.step-line.active {
+    background: var(--fg);
 }
 
 /* Body */
 .body {
     flex: 1;
-    min-height: 0;
-    display: flex;
+    overflow-y: auto;
+    padding: 22px;
 }
 
-/* Panel chrome */
 .panel {
-    flex: 1;
-    min-height: 0;
     display: flex;
     flex-direction: column;
-}
-.panelHead {
-    padding: 12px 20px 10px;
-}
-.panelTitle {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.2px;
-}
-.hint {
-    margin-top: 4px;
-    font-size: 12px;
-    opacity: 0.65;
-}
-.panelScroll {
-    padding: 0 20px 18px;
-    overflow: auto;
-}
-.panelFooter {
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    background: var(--bg);
+    gap: 14px;
 }
 
-/* Model selector */
-.modelSection {
-    margin-bottom: 16px;
-}
-.modelTabs {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 10px;
-}
-.modelTab {
-    appearance: none;
-    border: 0;
-    background: var(--hover-bg);
+.section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
     color: var(--muted);
-    padding: 8px 14px;
+    font-weight: 600;
+}
+
+/* Source toggle */
+.source-toggle {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
     border-radius: 10px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.12s ease, color 0.12s ease;
+    overflow: hidden;
 }
-.modelTab:hover {
-    background: var(--chip);
-    color: var(--fg);
-}
-.modelTab.active {
-    background: var(--chip);
-    color: var(--fg);
-}
-.modelList {
-    display: grid;
-    gap: 4px;
-}
-.modelRow {
-    appearance: none;
-    border: 0;
-    background: var(--hover-bg);
-    color: var(--fg);
-    padding: 10px 14px;
-    border-radius: 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    transition: background 0.1s ease;
-    text-align: left;
-}
-.modelRow:hover {
-    background: var(--chip);
-}
-.modelRow.selected {
-    background: var(--chip);
-    box-shadow: inset 0 0 0 1px var(--border);
-}
-.modelName {
+.source-btn {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
     font-size: 13px;
     font-weight: 600;
-    white-space: nowrap;
-}
-.modelMeta {
-    display: flex;
-    gap: 14px;
-    font-size: 11px;
-    opacity: 0.55;
-    white-space: nowrap;
-}
-
-/* Tiles */
-.grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-}
-@media (max-width: 980px) {
-    .grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-@media (max-width: 700px) {
-    .grid {
-        grid-template-columns: 1fr;
-    }
-}
-.tile {
-    appearance: none;
-    border: 0;
-    padding: 0;
-    text-align: left;
-    background: var(--hover-bg);
-    color: var(--fg);
-    border-radius: 14px;
     cursor: pointer;
-    transition:
-        transform 0.06s ease,
-        background 0.12s ease;
-    aspect-ratio: 1 / 1;
+    transition: all 0.15s ease;
 }
-.tile:hover {
-    background: var(--chip);
-}
-.tile:active {
-    transform: translateY(1px);
-}
-.tile.selected {
-    background: var(--chip);
-}
-.tileInner {
-    height: 100%;
-    padding: 14px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 10px;
-}
-.tileTop {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
-}
-.tileTitle {
-    font-size: 14px;
-    font-weight: 750;
-    line-height: 1.15;
-}
-.tileCost {
-    font-size: 12px;
-    opacity: 0.75;
-    white-space: nowrap;
-}
-.tileDesc {
-    font-size: 12px;
-    line-height: 1.35;
-    opacity: 0.75;
-    margin-top: 6px;
-    flex: 1;
-}
-.tileMeta {
-    font-size: 12px;
-    opacity: 0.55;
+.source-btn.active {
+    background: var(--fg);
+    color: var(--bg);
 }
 
-/* Prompt */
-.promptWrap {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.promptBox {
-    position: relative;
-    width: 100%;
-    flex: 1;
-    min-height: 220px;
-}
-.prompt {
-    width: 100%;
-    height: 100%;
-    resize: none;
-    border: 0;
-    outline: none;
-    border-radius: 14px;
-    padding: 16px 16px;
-    background: var(--hover-bg);
-    color: var(--fg);
-    font-size: 13px;
-    line-height: 1.35;
-}
-.prompt:focus {
-    background: var(--chip);
-}
-.prompt:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-.promptOverlay {
-    position: absolute;
-    inset: 0;
-    border-radius: 14px;
-    background: var(--overlay);
-    display: grid;
-    place-items: center;
-    gap: 10px;
-    align-content: center;
-}
-.promptHelp {
-    font-size: 12px;
-    opacity: 0.55;
-}
-
-/* Refine */
-.refineWrap {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.qList {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.qRow {
+/* Template grid */
+.template-grid {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
-.qLabel {
+
+.template-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--fg);
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+.template-card:hover {
+    border-color: color-mix(in oklab, var(--fg) 50%, var(--border));
+}
+.template-card.selected {
+    border-color: var(--fg);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.tpl-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.tpl-info {
+    flex: 1;
+    min-width: 0;
+}
+.tpl-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.tpl-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+    margin-bottom: 6px;
+}
+.tpl-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.tpl-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+}
+.tpl-check {
+    font-size: 16px;
+    color: #4ade80;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Upload drop zone */
+.upload-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.drop-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 40px 20px;
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+}
+.drop-zone:hover,
+.drop-zone.dragover {
+    border-color: var(--fg);
+    background: rgba(255, 255, 255, 0.02);
+}
+.drop-zone.uploaded {
+    border-style: solid;
+    border-color: #4ade8060;
+    background: rgba(74, 222, 128, 0.03);
+}
+
+.drop-icon {
+    font-size: 32px;
+}
+.drop-title {
+    font-size: 14px;
+    font-weight: 600;
+}
+.drop-hint {
+    font-size: 12px;
+    color: var(--muted);
+}
+.drop-formats {
+    font-size: 11px;
+    color: var(--muted);
+    opacity: 0.6;
+    margin-top: 6px;
+}
+
+.remove-file {
+    margin-top: 6px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+}
+.remove-file:hover {
+    color: #f87171;
+    border-color: #f87171;
+}
+
+/* Compute options */
+.compute-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.compute-option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--fg);
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+.compute-option:hover {
+    border-color: color-mix(in oklab, var(--fg) 50%, var(--border));
+}
+.compute-option.selected {
+    border-color: var(--fg);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.co-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+.co-info {
+    flex: 1;
+}
+.co-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+.co-desc {
+    font-size: 12px;
+    color: var(--muted);
+}
+.co-warning {
+    font-size: 10px;
+    font-weight: 700;
+    color: #fbbf24;
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid #fbbf2440;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.api-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid #fbbf2430;
+    background: rgba(251, 191, 36, 0.04);
+}
+.warn-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.warn-text {
+    font-size: 12px;
+    color: #fbbf24;
+    line-height: 1.5;
+}
+
+/* Model tabs & list */
+.model-tabs {
+    display: flex;
+    gap: 6px;
+}
+.mtab {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+.mtab:hover {
+    color: var(--fg);
+    border-color: var(--fg);
+}
+.mtab.active {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+}
+
+.model-list {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
-.qTitle {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.2px;
-}
-.req {
-    opacity: 0.55;
-    margin-left: 6px;
-}
-.qHelp {
-    font-size: 12px;
-    opacity: 0.55;
-}
-.qInput {
-    width: 100%;
-    border: 0;
-    outline: none;
-    border-radius: 14px;
-    padding: 12px 12px;
-    background: var(--hover-bg);
-    color: var(--fg);
-    font-size: 13px;
-    line-height: 1.35;
-}
-.qInput:focus {
-    background: var(--chip);
-}
 
-/* Code */
-.codeWrap {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.codeBlock {
-    margin: 0;
-    padding: 14px;
-    border-radius: 14px;
-    background: var(--hover-bg);
-    overflow: auto;
-    font-size: 12px;
-    line-height: 1.45;
-    min-height: 220px;
-}
-.codeActions {
-    display: flex;
-    gap: 10px;
-}
-.status {
-    font-size: 12px;
-    opacity: 0.65;
-}
-.status.ok {
-    opacity: 0.9;
-}
-
-/* Simple skeleton */
-.skeletonWrap {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.skeleton {
-    height: 46px;
-    border-radius: 14px;
-    background: var(--hover-bg);
-}
-
-/* Spinner */
-.spinnerRow {
-    margin-top: 6px;
+.model-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    transition: all 0.12s ease;
+    text-align: left;
 }
-.spinner {
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    border: 2px solid var(--border);
-    border-top-color: var(--fg);
-    animation: spin 0.9s linear infinite;
+.model-row:hover {
+    border-color: color-mix(in oklab, var(--fg) 40%, var(--border));
 }
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+.model-row.selected {
+    border-color: var(--fg);
+    background: rgba(255, 255, 255, 0.03);
 }
 
-/* Buttons */
-.btn {
-    appearance: none;
-    border: 0;
-    border-radius: 12px;
-    padding: 10px 12px;
+.mr-name {
+    font-size: 13px;
+    font-weight: 600;
+}
+.mr-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+/* Region */
+.region-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.region-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--fg);
     font-size: 12px;
     cursor: pointer;
-    transition:
-        transform 0.06s ease,
-        background 0.12s ease,
-        opacity 0.12s ease;
+    transition: all 0.12s ease;
 }
-.btn:active {
-    transform: translateY(1px);
+.region-btn:hover {
+    border-color: var(--fg);
 }
-.ghost {
-    background: var(--chip);
-    color: var(--fg);
-}
-.ghost:hover {
-    background: var(--chip);
-}
-.primary {
-    background: var(--btn-primary-bg);
-    color: var(--btn-primary-fg);
-    font-weight: 750;
-}
-.primary:hover {
-    opacity: 0.92;
-}
-.btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+.region-btn.selected {
+    border-color: var(--fg);
+    background: rgba(255, 255, 255, 0.03);
 }
 
-/* Utilities */
-.mono {
-    font-family:
-        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
+/* Deploy list */
+.deploy-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
-.tiny {
-    font-size: 12px;
+.deploy-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    transition: all 0.12s ease;
+    text-align: left;
 }
-.subtle {
-    opacity: 0.65;
+.deploy-row:hover {
+    border-color: color-mix(in oklab, var(--fg) 40%, var(--border));
+}
+.deploy-row.selected {
+    border-color: var(--fg);
+    background: rgba(255, 255, 255, 0.03);
+}
+.dr-left {
+    display: grid;
+    gap: 2px;
+}
+.dr-name {
+    font-size: 13px;
+    font-weight: 600;
+}
+.dr-info {
+    font-size: 11px;
+    color: var(--muted);
+}
+.dr-status {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.dr-status.running {
+    color: #4ade80;
 }
 
-/* Toast */
-.toast {
-    position: absolute;
-    right: 18px;
-    bottom: 18px;
+/* Review grid */
+.review-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+.review-item {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
     background: var(--chip);
+}
+.rv-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+.rv-value {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.name-input {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
     color: var(--fg);
+    font-size: 13px;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+.name-input:focus {
+    border-color: var(--fg);
+}
+.name-input::placeholder {
+    color: var(--muted);
+}
+
+/* Deploy result */
+.deploy-result {
+    margin-top: 18px;
+    padding: 18px;
     border-radius: 12px;
-    padding: 10px 12px;
+    border: 1px solid #4ade8040;
+    background: rgba(74, 222, 128, 0.04);
+}
+.dr-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #4ade80;
+}
+
+.endpoint-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.2);
+    margin-top: 6px;
+}
+.endpoint-url {
+    flex: 1;
     font-size: 12px;
+    word-break: break-all;
+}
+.copy-btn {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+}
+.copy-btn:hover {
+    color: var(--fg);
+    border-color: var(--fg);
+}
+
+/* Footer */
+.footer {
+    display: flex;
+    align-items: center;
+    padding: 12px 22px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.footer-spacer {
+    flex: 1;
+}
+
+.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+@media (max-width: 600px) {
+    .review-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>

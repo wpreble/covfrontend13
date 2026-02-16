@@ -292,9 +292,11 @@ const emit = defineEmits(["close", "redeploy", "test", "update"]);
  * Mock agent store (inside component for now)
  */
 const mockAgentsById = {
-    ag_001: { id: "ag_001", name: "Indexer" },
-    ag_002: { id: "ag_002", name: "RAG Router" },
-    ag_003: { id: "ag_003", name: "Report Writer" },
+    ag_001: { id: "ag_001", name: "Covenant Claw CMO" },
+    ag_002: { id: "ag_002", name: "Growth Hacker" },
+    ag_003: { id: "ag_003", name: "Sentinel" },
+    ag_004: { id: "ag_004", name: "Micro Chat" },
+    ag_005: { id: "ag_005", name: "Ops Automator" },
 };
 
 const agent = computed(() => mockAgentsById[props.agentId]);
