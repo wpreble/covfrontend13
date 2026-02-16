@@ -477,7 +477,7 @@ const existingDeploys = [
 ];
 
 const apiModelsOpen = [
-    { id: "gpt-4o-api", name: "GPT-4o", provider: "OpenAI", cost: "$2.50/MTok", warning: "Your data is shared with OpenAI" },
+    { id: "gpt-5-2-api", name: "GPT-5.2", provider: "OpenAI", cost: "$2.50/MTok", warning: "Your data is shared with OpenAI" },
     { id: "opus-4-6-api", name: "Claude Opus 4.6", provider: "Anthropic", cost: "$15.00/MTok", warning: "Your data is shared with Anthropic" },
 ];
 const apiModelsSecure = [
