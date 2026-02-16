@@ -447,17 +447,17 @@ const templates = ref([
 ]);
 
 const generalModels = [
-    { id: "kimi-25-secure", name: "Kimi K2 (Recommended)", params: "1T MoE", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
+    { id: "kimi-25-secure", name: "Kimi 2.5 (Recommended)", params: "1T MoE", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
     { id: "qwen-3-235b", name: "Qwen 3 235B", params: "235B MoE", ctx: "128k", gpu: "NVIDIA A100 80GB", price: 1.79 },
     { id: "deepseek-v3", name: "DeepSeek V3", params: "671B MoE", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
     { id: "llama-4-scout", name: "Llama 4 Scout", params: "109B MoE", ctx: "512k", gpu: "NVIDIA A100 80GB", price: 1.79 },
-    { id: "minimax-m1", name: "MiniMax-M1", params: "456B", ctx: "1M", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
+    { id: "minimax-25", name: "MiniMax 2.5", params: "456B", ctx: "1M", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
 ];
 
 const finetunedModels = [
     { id: "ft-qwen3-covenant", name: "Qwen 3 235B - Covenant Custom", params: "235B MoE (FT)", ctx: "128k", gpu: "NVIDIA A100 80GB", price: 1.79 },
-    { id: "ft-minimax-ops", name: "MiniMax-M1 - Ops Fine-tune", params: "456B (FT)", ctx: "1M", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
-    { id: "ft-kimi-secure", name: "Kimi K2 - Secure Covenant", params: "1T MoE (FT)", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
+    { id: "ft-minimax-ops", name: "MiniMax 2.5 - Ops Fine-tune", params: "456B (FT)", ctx: "1M", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
+    { id: "ft-kimi-secure", name: "Kimi 2.5 - Secure Covenant", params: "1T MoE (FT)", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
 ];
 
 const activeModels = computed(() =>
@@ -472,7 +472,7 @@ const regions = [
 ];
 
 const existingDeploys = [
-    { id: "dep_001", model: "Kimi K2", gpu: "NVIDIA H100 SXM 80GB", region: "us-west-2", status: "running" },
+    { id: "dep_001", model: "Kimi 2.5", gpu: "NVIDIA H100 SXM 80GB", region: "us-west-2", status: "running" },
     { id: "dep_002", model: "Qwen 3 235B", gpu: "NVIDIA A100 80GB", region: "us-east-1", status: "running" },
 ];
 
@@ -481,9 +481,9 @@ const apiModelsOpen = [
     { id: "opus-4-6-api", name: "Claude Opus 4.6", provider: "Anthropic", cost: "$15.00/MTok", warning: "Your data is shared with Anthropic" },
 ];
 const apiModelsSecure = [
-    { id: "kimi-k2-api", name: "Kimi K2", provider: "Moonshot AI", cost: "$1.00/MTok", secure: true },
+    { id: "kimi-25-api", name: "Kimi 2.5", provider: "Moonshot AI", cost: "$1.00/MTok", secure: true },
     { id: "qwen-3-30b-api", name: "Qwen 3 30B-A3B", provider: "Alibaba Cloud", cost: "$0.35/MTok", secure: true },
-    { id: "minimax-m1-api", name: "MiniMax-M1", provider: "MiniMax", cost: "$0.80/MTok", secure: true },
+    { id: "minimax-25-api", name: "MiniMax 2.5", provider: "MiniMax", cost: "$0.80/MTok", secure: true },
 ];
 const apiModels = [...apiModelsOpen, ...apiModelsSecure];
 
