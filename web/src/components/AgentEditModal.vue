@@ -296,7 +296,7 @@ const mockAgentsById = {
     ag_002: { id: "ag_002", name: "Growth Hacker" },
     ag_003: { id: "ag_003", name: "Sentinel" },
     ag_004: { id: "ag_004", name: "Micro Chat" },
-    ag_005: { id: "ag_005", name: "Ops Automator" },
+    ag_005: { id: "ag_005", name: "CTO Mode" },
 };
 
 const agent = computed(() => mockAgentsById[props.agentId]);

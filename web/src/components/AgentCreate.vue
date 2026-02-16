@@ -394,7 +394,7 @@ const templates = ref([
     },
     {
         id: "ops-automator",
-        name: "Ops Automator",
+        name: "CTO Mode",
         icon: "\u2699\uFE0F",
         desc: "DevOps and infrastructure automation. CI/CD pipelines, deployments, health checks.",
         tags: ["devops", "infra", "ci/cd"],

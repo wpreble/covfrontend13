@@ -224,7 +224,7 @@ const agents = ref([
     },
     {
         id: "ag_005",
-        name: "Ops Automator",
+        name: "CTO Mode",
         role: "DevOps & Infrastructure Agent",
         gpu: "NVIDIA L4",
         pricePerHour: 0.48,
