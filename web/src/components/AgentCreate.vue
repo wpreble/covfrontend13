@@ -248,19 +248,44 @@
 
                         <!-- API-based model -->
                         <template v-if="computeMode === 'api'">
-                            <div class="section-label" style="margin-top: 18px">API Provider</div>
+                            <div class="section-label" style="margin-top: 18px">Open Cloud</div>
                             <div class="model-list">
                                 <button
-                                    v-for="m in apiModels"
+                                    v-for="m in apiModelsOpen"
                                     :key="m.id"
-                                    class="model-row"
+                                    class="model-row api-open-row"
                                     :class="{ selected: selectedApiModel === m.id }"
                                     @click="selectedApiModel = m.id"
                                 >
-                                    <div class="mr-name">{{ m.name }}</div>
-                                    <div class="mr-meta mono">
-                                        <span>{{ m.provider }}</span>
-                                        <span>{{ m.cost }}</span>
+                                    <div class="mr-left">
+                                        <div class="mr-name">{{ m.name }}</div>
+                                        <div class="mr-meta mono">
+                                            <span>{{ m.provider }}</span>
+                                            <span>{{ m.cost }}</span>
+                                        </div>
+                                        <div class="api-warning">{{ m.warning }}</div>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <div class="section-label" style="margin-top: 18px">Secure US-Based Deployment</div>
+                            <div class="secure-badge-row">
+                                <span class="secure-badge">Your data stays sovereign</span>
+                            </div>
+                            <div class="model-list">
+                                <button
+                                    v-for="m in apiModelsSecure"
+                                    :key="m.id"
+                                    class="model-row api-secure-row"
+                                    :class="{ selected: selectedApiModel === m.id }"
+                                    @click="selectedApiModel = m.id"
+                                >
+                                    <div class="mr-left">
+                                        <div class="mr-name">{{ m.name }} <span class="secure-tag">Secure</span></div>
+                                        <div class="mr-meta mono">
+                                            <span>{{ m.provider }}</span>
+                                            <span>{{ m.cost }}</span>
+                                        </div>
                                     </div>
                                 </button>
                             </div>
@@ -318,10 +343,16 @@
                             placeholder="e.g. my-growth-agent"
                         />
 
-                        <div v-if="computeMode === 'api'" class="api-warning" style="margin-top: 14px">
+                        <div v-if="computeMode === 'api' && apiModelsOpen.find(m => m.id === selectedApiModel)" class="api-warning-box warning-open" style="margin-top: 14px">
                             <div class="warn-icon">&#9888;&#65039;</div>
                             <div class="warn-text">
-                                This agent will use API-based compute. Your data will be sent to external servers. Consider using dedicated compute for sensitive workloads.
+                                {{ apiModelsOpen.find(m => m.id === selectedApiModel)?.warning }}. Consider using a Secure US-Based model or dedicated compute for sensitive workloads.
+                            </div>
+                        </div>
+                        <div v-else-if="computeMode === 'api' && apiModelsSecure.find(m => m.id === selectedApiModel)" class="api-warning-box warning-secure" style="margin-top: 14px">
+                            <div class="secure-icon">&#9989;</div>
+                            <div class="secure-text">
+                                Secure US-based deployment. Your data stays within sovereign infrastructure.
                             </div>
                         </div>
 
@@ -363,7 +394,7 @@ const modelCategory = ref("general");
 const selectedModel = ref("kimi-25-secure");
 const selectedRegion = ref("us-west-2");
 const selectedDeploy = ref("");
-const selectedApiModel = ref("gpt-4o-api");
+const selectedApiModel = ref("");
 
 const agentName = ref("");
 const deploying = ref(false);
@@ -445,11 +476,16 @@ const existingDeploys = [
     { id: "dep_002", model: "Qwen 3 235B", gpu: "NVIDIA A100 80GB", region: "us-east-1", status: "running" },
 ];
 
-const apiModels = [
-    { id: "gpt-4o-api", name: "GPT-4o", provider: "OpenAI", cost: "$2.50/MTok" },
-    { id: "claude-sonnet-4-api", name: "Claude Sonnet 4", provider: "Anthropic", cost: "$3.00/MTok" },
-    { id: "gemini-2-api", name: "Gemini 2.5 Pro", provider: "Google", cost: "$1.25/MTok" },
+const apiModelsOpen = [
+    { id: "gpt-4o-api", name: "GPT-4o", provider: "OpenAI", cost: "$2.50/MTok", warning: "Your data is shared with OpenAI" },
+    { id: "opus-4-6-api", name: "Claude Opus 4.6", provider: "Anthropic", cost: "$15.00/MTok", warning: "Your data is shared with Anthropic" },
 ];
+const apiModelsSecure = [
+    { id: "kimi-k2-api", name: "Kimi K2", provider: "Moonshot AI", cost: "$1.00/MTok", secure: true },
+    { id: "qwen-3-30b-api", name: "Qwen 3 30B-A3B", provider: "Alibaba Cloud", cost: "$0.35/MTok", secure: true },
+    { id: "minimax-m1-api", name: "MiniMax-M1", provider: "MiniMax", cost: "$0.80/MTok", secure: true },
+];
+const apiModels = [...apiModelsOpen, ...apiModelsSecure];
 
 const canContinue = computed(() => {
     if (step.value === 1) {
@@ -483,7 +519,7 @@ function emitClose() {
     selectedModel.value = "kimi-25-secure";
     selectedRegion.value = "us-west-2";
     selectedDeploy.value = "";
-    selectedApiModel.value = "gpt-4o-api";
+    selectedApiModel.value = "";
     agentName.value = "";
     deploying.value = false;
     deploySuccess.value = false;
@@ -972,6 +1008,70 @@ async function copyText(text) {
 .warn-text {
     font-size: 12px;
     color: #fbbf24;
+    line-height: 1.5;
+}
+
+/* API section */
+.api-warning {
+    font-size: 11px;
+    color: #f87171;
+    margin-top: 4px;
+    font-weight: 500;
+}
+.api-open-row.selected {
+    border-color: #fbbf24;
+    background: rgba(251, 191, 36, 0.04);
+}
+.api-secure-row.selected {
+    border-color: #4ade80;
+    background: rgba(74, 222, 128, 0.04);
+}
+.secure-badge-row {
+    margin-bottom: 8px;
+}
+.secure-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.08);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    border-radius: 6px;
+    padding: 3px 10px;
+}
+.secure-tag {
+    font-size: 10px;
+    font-weight: 600;
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.12);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+.api-warning-box {
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.api-warning-box.warning-open {
+    border: 1px solid #fbbf2430;
+    background: rgba(251, 191, 36, 0.04);
+}
+.api-warning-box.warning-secure {
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    background: rgba(74, 222, 128, 0.04);
+}
+.secure-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.secure-text {
+    font-size: 12px;
+    color: #4ade80;
     line-height: 1.5;
 }
 
