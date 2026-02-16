@@ -379,11 +379,11 @@ const templates = ref([
         tags: ["chat", "lightweight", "fast"],
     },
     {
-        id: "growth-stack",
-        name: "Growth Stack (Sentinel)",
+        id: "sentinel",
+        name: "Sentinel",
         icon: "\u{1F6E1}",
-        desc: "System monitoring and logging bot. Tracks events, alerts on anomalies, and generates reports.",
-        tags: ["monitoring", "logging", "alerts"],
+        desc: "Logging, monitoring, and threat detection bot. Tracks events, alerts on anomalies, and defends against security threats.",
+        tags: ["monitoring", "logging", "threat-detection"],
     },
     {
         id: "growth-hacker",
