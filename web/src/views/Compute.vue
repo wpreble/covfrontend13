@@ -145,93 +145,218 @@
         </template>
 
         <template v-if="activeTab === 'command'">
-            <section class="card deployedCard">
-                <div class="head">
-                    <h3>Active Deployments</h3>
-                    <span class="pill" v-if="activeDeployments.filter(d => d.status === 'running').length">
-                        {{ activeDeployments.filter(d => d.status === 'running').length }} running
-                    </span>
-                </div>
+            <!-- DETAIL VIEW -->
+            <template v-if="selectedDeployment">
+                <section class="card detailCard">
+                    <button class="detailBack" @click="closeDeploymentDetail">&larr; Back to deployments</button>
 
-                <div v-if="activeDeployments.length > 0" class="costSummary">
-                    <div class="costItem">
-                        <span class="costLabel">Running cost</span>
-                        <span class="costValue">${{ totalRunningCostPerHr }}<span class="costUnit">/hr</span></span>
+                    <div class="detailHeader">
+                        <span class="deployedDot" :class="selectedDeployment.status"></span>
+                        <div class="detailTitle">
+                            <h3>{{ selectedDeployment.model }}</h3>
+                            <span class="statusBadge" :class="selectedDeployment.status">{{ selectedDeployment.status }}</span>
+                        </div>
+                        <div class="detailRate">${{ (gpuPriceMap[selectedDeployment.gpu] || 0).toFixed(2) }}<span class="dpUnit">/hr</span></div>
                     </div>
-                    <div class="costDivider"></div>
-                    <div class="costItem">
-                        <span class="costLabel">Total accrued</span>
-                        <span class="costValue">${{ totalAccruedCost }}</span>
+
+                    <div class="detailMeta">
+                        <div class="detailMetaItem"><span class="deployedK">GPU</span><span class="mono">{{ selectedDeployment.gpu }}</span></div>
+                        <div class="detailMetaItem"><span class="deployedK">Region</span><span>{{ selectedDeployment.region }}</span></div>
+                        <div class="detailMetaItem"><span class="deployedK">Uptime</span><span class="mono">{{ selectedDeployment.uptime }}</span></div>
+                        <div class="detailMetaItem"><span class="deployedK">Requests</span><span class="mono">{{ selectedDeployment.requests }}</span></div>
+                        <div class="detailMetaItem"><span class="deployedK">Accrued</span><span class="mono">${{ calcAccrued(selectedDeployment) }}</span></div>
                     </div>
-                </div>
 
-                <div v-if="activeDeployments.length === 0" class="emptyDeployed">
-                    <div class="emptyIcon">⬡</div>
-                    <p>No models deployed yet</p>
-                    <span class="emptyHint">Deploy a model above to see it here</span>
-                </div>
-
-                <div v-else class="deployedGrid">
-                    <div
-                        v-for="d in activeDeployments"
-                        :key="d.id"
-                        class="deployedItem"
-                        :class="d.status"
-                    >
-                        <div class="deployedTop">
-                            <span class="deployedDot" :class="d.status"></span>
-                            <strong class="deployedName">{{ d.model }}</strong>
-                            <span class="statusBadge" :class="d.status">{{ d.status }}</span>
-                        </div>
-
-                        <div class="deployedPricing">
-                            <span class="dpRate">${{ (gpuPriceMap[d.gpu] || 0).toFixed(2) }}<span class="dpUnit">/hr</span></span>
-                            <span class="dpAccrued" :class="{ stopped: d.status === 'stopped' }">
-                                {{ d.status === 'stopped' ? 'Stopped' : 'Accrued' }}: ${{ calcAccrued(d) }}
-                            </span>
-                        </div>
-
-                        <div class="deployedMeta">
-                            <div class="deployedMetaRow">
-                                <span class="deployedK">GPU</span>
-                                <span class="deployedV mono">{{ d.gpu }}</span>
-                            </div>
-                            <div class="deployedMetaRow">
-                                <span class="deployedK">Region</span>
-                                <span class="deployedV">{{ d.region }}</span>
-                            </div>
-                            <div class="deployedMetaRow">
-                                <span class="deployedK">Uptime</span>
-                                <span class="deployedV mono">{{ d.uptime }}</span>
-                            </div>
-                            <div class="deployedMetaRow">
-                                <span class="deployedK">Requests</span>
-                                <span class="deployedV mono">{{ d.requests }}</span>
-                            </div>
-                        </div>
-
-                        <div class="deployedActions">
-                            <button class="depActBtn view" @click="viewDeployment(d)">View</button>
-                            <button class="depActBtn edit" @click="editDeployment(d)">Edit</button>
-                            <button
-                                v-if="d.status === 'running' || d.status === 'provisioning'"
-                                class="depActBtn stop"
-                                @click="stopDeployment(d.id)"
-                            >
-                                Stop
+                    <div class="detailSection">
+                        <h4>API Endpoint</h4>
+                        <div class="detailCopyRow">
+                            <code class="detailCode">{{ genEndpoint(selectedDeployment) }}</code>
+                            <button class="detailCopyBtn" @click="copyToClipboard(genEndpoint(selectedDeployment), 'endpoint')">
+                                {{ endpointCopied ? 'Copied!' : 'Copy' }}
                             </button>
-                            <button
-                                v-if="d.status === 'stopped'"
-                                class="depActBtn start"
-                                @click="startDeployment(d.id)"
-                            >
-                                Start
-                            </button>
-                            <button class="depActBtn destroy" @click="destroyDeployment(d.id)">Destroy</button>
                         </div>
                     </div>
-                </div>
-            </section>
+
+                    <div class="detailSection">
+                        <h4>API Key</h4>
+                        <div class="detailCopyRow">
+                            <code class="detailCode secret">{{ genApiKey(selectedDeployment.id) }}</code>
+                            <button class="detailCopyBtn" @click="copyToClipboard(genApiKey(selectedDeployment.id), 'key')">
+                                {{ apiKeyCopied ? 'Copied!' : 'Copy' }}
+                            </button>
+                        </div>
+                        <p class="detailHint">Keep this key secret. Rotate it from Settings if compromised.</p>
+                    </div>
+
+                    <div class="detailSection">
+                        <h4>Quick Start &mdash; OpenAI-Compatible API</h4>
+                        <p class="detailDesc">This endpoint is fully compatible with the OpenAI API format. Use any OpenAI SDK or HTTP client.</p>
+
+                        <div class="codeBlock">
+                            <div class="codeBlockHeader">
+                                <span>Python</span>
+                            </div>
+                            <pre class="codeContent"><span class="ck">from</span> openai <span class="ck">import</span> OpenAI
+
+client = OpenAI(
+    base_url=<span class="cs">"{{ genEndpoint(selectedDeployment) }}"</span>,
+    api_key=<span class="cs">"{{ genApiKey(selectedDeployment.id) }}"</span>,
+)
+
+response = client.chat.completions.create(
+    model=<span class="cs">"{{ selectedDeployment.model.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '') }}"</span>,
+    messages=[
+        {<span class="cs">"role"</span>: <span class="cs">"user"</span>, <span class="cs">"content"</span>: <span class="cs">"Hello!"</span>}
+    ],
+)
+<span class="ck">print</span>(response.choices[<span class="cn">0</span>].message.content)</pre>
+                        </div>
+
+                        <div class="codeBlock">
+                            <div class="codeBlockHeader">
+                                <span>cURL</span>
+                            </div>
+                            <pre class="codeContent">curl {{ genEndpoint(selectedDeployment) }}/chat/completions \
+  -H <span class="cs">"Authorization: Bearer {{ genApiKey(selectedDeployment.id) }}"</span> \
+  -H <span class="cs">"Content-Type: application/json"</span> \
+  -d <span class="cs">'{
+    "model": "{{ selectedDeployment.model.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '') }}",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'</span></pre>
+                        </div>
+
+                        <div class="codeBlock">
+                            <div class="codeBlockHeader">
+                                <span>JavaScript / Node.js</span>
+                            </div>
+                            <pre class="codeContent"><span class="ck">import</span> OpenAI <span class="ck">from</span> <span class="cs">"openai"</span>;
+
+<span class="ck">const</span> client = <span class="ck">new</span> OpenAI({
+    baseURL: <span class="cs">"{{ genEndpoint(selectedDeployment) }}"</span>,
+    apiKey: <span class="cs">"{{ genApiKey(selectedDeployment.id) }}"</span>,
+});
+
+<span class="ck">const</span> res = <span class="ck">await</span> client.chat.completions.create({
+    model: <span class="cs">"{{ selectedDeployment.model.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '') }}"</span>,
+    messages: [{ role: <span class="cs">"user"</span>, content: <span class="cs">"Hello!"</span> }],
+});
+console.log(res.choices[<span class="cn">0</span>].message.content);</pre>
+                        </div>
+                    </div>
+
+                    <div class="detailSection">
+                        <h4>Supported Endpoints</h4>
+                        <div class="endpointList">
+                            <div class="endpointRow"><span class="endpointMethod post">POST</span><code>/chat/completions</code><span class="endpointDesc">Chat completions (streaming supported)</span></div>
+                            <div class="endpointRow"><span class="endpointMethod post">POST</span><code>/completions</code><span class="endpointDesc">Text completions</span></div>
+                            <div class="endpointRow"><span class="endpointMethod post">POST</span><code>/embeddings</code><span class="endpointDesc">Text embeddings</span></div>
+                            <div class="endpointRow"><span class="endpointMethod get">GET</span><code>/models</code><span class="endpointDesc">List available models</span></div>
+                        </div>
+                    </div>
+
+                    <div class="detailActions">
+                        <button class="depActBtn edit" @click="editDeployment(selectedDeployment)">Edit Config</button>
+                        <button
+                            v-if="selectedDeployment.status === 'running' || selectedDeployment.status === 'provisioning'"
+                            class="depActBtn stop"
+                            @click="stopDeployment(selectedDeployment.id)"
+                        >Stop</button>
+                        <button
+                            v-if="selectedDeployment.status === 'stopped'"
+                            class="depActBtn start"
+                            @click="startDeployment(selectedDeployment.id)"
+                        >Start</button>
+                        <button class="depActBtn destroy" @click="destroyDeployment(selectedDeployment.id); closeDeploymentDetail()">Destroy</button>
+                    </div>
+                </section>
+            </template>
+
+            <!-- GRID VIEW -->
+            <template v-else>
+                <section class="card deployedCard">
+                    <div class="head">
+                        <h3>Active Deployments</h3>
+                        <span class="pill" v-if="activeDeployments.filter(d => d.status === 'running').length">
+                            {{ activeDeployments.filter(d => d.status === 'running').length }} running
+                        </span>
+                    </div>
+
+                    <div v-if="activeDeployments.length > 0" class="costSummary">
+                        <div class="costItem">
+                            <span class="costLabel">Running cost</span>
+                            <span class="costValue">${{ totalRunningCostPerHr }}<span class="costUnit">/hr</span></span>
+                        </div>
+                        <div class="costDivider"></div>
+                        <div class="costItem">
+                            <span class="costLabel">Total accrued</span>
+                            <span class="costValue">${{ totalAccruedCost }}</span>
+                        </div>
+                    </div>
+
+                    <div v-if="activeDeployments.length === 0" class="emptyDeployed">
+                        <div class="emptyIcon">⬡</div>
+                        <p>No models deployed yet</p>
+                        <span class="emptyHint">Deploy a model above to see it here</span>
+                    </div>
+
+                    <div v-else class="deployedGrid">
+                        <div
+                            v-for="d in activeDeployments"
+                            :key="d.id"
+                            class="deployedItem clickable"
+                            :class="d.status"
+                            @click="viewDeployment(d)"
+                        >
+                            <div class="deployedTop">
+                                <span class="deployedDot" :class="d.status"></span>
+                                <strong class="deployedName">{{ d.model }}</strong>
+                                <span class="statusBadge" :class="d.status">{{ d.status }}</span>
+                            </div>
+
+                            <div class="deployedPricing">
+                                <span class="dpRate">${{ (gpuPriceMap[d.gpu] || 0).toFixed(2) }}<span class="dpUnit">/hr</span></span>
+                                <span class="dpAccrued" :class="{ stopped: d.status === 'stopped' }">
+                                    {{ d.status === 'stopped' ? 'Stopped' : 'Accrued' }}: ${{ calcAccrued(d) }}
+                                </span>
+                            </div>
+
+                            <div class="deployedMeta">
+                                <div class="deployedMetaRow">
+                                    <span class="deployedK">GPU</span>
+                                    <span class="deployedV mono">{{ d.gpu }}</span>
+                                </div>
+                                <div class="deployedMetaRow">
+                                    <span class="deployedK">Region</span>
+                                    <span class="deployedV">{{ d.region }}</span>
+                                </div>
+                                <div class="deployedMetaRow">
+                                    <span class="deployedK">Uptime</span>
+                                    <span class="deployedV mono">{{ d.uptime }}</span>
+                                </div>
+                                <div class="deployedMetaRow">
+                                    <span class="deployedK">Requests</span>
+                                    <span class="deployedV mono">{{ d.requests }}</span>
+                                </div>
+                            </div>
+
+                            <div class="deployedActions" @click.stop>
+                                <button
+                                    v-if="d.status === 'running' || d.status === 'provisioning'"
+                                    class="depActBtn stop"
+                                    @click="stopDeployment(d.id)"
+                                >Stop</button>
+                                <button
+                                    v-if="d.status === 'stopped'"
+                                    class="depActBtn start"
+                                    @click="startDeployment(d.id)"
+                                >Start</button>
+                            </div>
+
+                            <div class="deployedCardHint">Click to view API key &amp; usage &rarr;</div>
+                        </div>
+                    </div>
+                </section>
+            </template>
         </template>
 
         <!-- MAP (always visible below) -->
@@ -597,8 +722,35 @@ function destroyDeployment(id) {
     }
 }
 
+const selectedDeployment = ref(null);
+const apiKeyCopied = ref(false);
+const endpointCopied = ref(false);
+
+function genApiKey(id) {
+    const hash = Array.from(id).reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
+    const hex = Math.abs(hash).toString(16).padStart(8, "0");
+    return "cvnt-sk-" + hex + "a4f7b2e91d3c6058";
+}
+
+function genEndpoint(dep) {
+    const slug = dep.model.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "");
+    return "https://api.covenant.cloud/v1/" + slug;
+}
+
 function viewDeployment(dep) {
-    activeTab.value = "command";
+    selectedDeployment.value = dep;
+    apiKeyCopied.value = false;
+    endpointCopied.value = false;
+}
+
+function closeDeploymentDetail() {
+    selectedDeployment.value = null;
+}
+
+function copyToClipboard(text, which) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    if (which === "key") { apiKeyCopied.value = true; setTimeout(() => apiKeyCopied.value = false, 2000); }
+    if (which === "endpoint") { endpointCopied.value = true; setTimeout(() => endpointCopied.value = false, 2000); }
 }
 
 function editDeployment(dep) {
@@ -1632,6 +1784,237 @@ tr:hover td {
     color: #ef4444;
     border-color: rgba(239, 68, 68, 0.3);
     background: rgba(239, 68, 68, 0.08);
+}
+
+/* Clickable deployment cards */
+.deployedItem.clickable {
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.deployedItem.clickable:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+.deployedCardHint {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    margin-top: 4px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+.deployedItem.clickable:hover .deployedCardHint {
+    opacity: 1;
+}
+
+/* Detail view */
+.detailCard {
+    padding: 28px;
+}
+.detailBack {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 20px;
+    transition: color 0.15s ease;
+}
+.detailBack:hover {
+    color: var(--fg);
+}
+.detailHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+.detailTitle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+.detailTitle h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+}
+.detailRate {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    white-space: nowrap;
+}
+.detailMeta {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+    padding: 16px;
+    background: var(--chip);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
+.detailMetaItem {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.detailMetaItem .deployedK {
+    font-size: 11px;
+}
+.detailMetaItem span:last-child {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.detailSection {
+    margin-bottom: 24px;
+}
+.detailSection h4 {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+    letter-spacing: 0.2px;
+}
+.detailDesc {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 14px 0;
+    line-height: 1.5;
+}
+.detailCopyRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--chip);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+.detailCode {
+    flex: 1;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", monospace;
+    font-size: 13px;
+    color: var(--fg);
+    word-break: break-all;
+    user-select: all;
+}
+.detailCode.secret {
+    color: var(--accent);
+}
+.detailCopyBtn {
+    background: var(--accent);
+    color: var(--btn-primary-fg, #000);
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.12s ease;
+}
+.detailCopyBtn:hover {
+    opacity: 0.85;
+}
+.detailHint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+}
+
+/* Code blocks */
+.codeBlock {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    background: var(--code-bg);
+}
+.codeBlockHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    background: var(--chip);
+}
+.codeContent {
+    margin: 0;
+    padding: 14px 16px;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--fg);
+    overflow-x: auto;
+    white-space: pre;
+    tab-size: 4;
+}
+.ck { color: #c678dd; }
+.cs { color: #98c379; }
+.cn { color: #d19a66; }
+
+/* Endpoint list */
+.endpointList {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.endpointRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+}
+.endpointRow:last-child {
+    border-bottom: none;
+}
+.endpointMethod {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    min-width: 40px;
+    text-align: center;
+}
+.endpointMethod.post {
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+}
+.endpointMethod.get {
+    background: rgba(34, 197, 94, 0.12);
+    color: #22c55e;
+}
+.endpointRow code {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", monospace;
+    font-size: 12.5px;
+    color: var(--fg);
+    min-width: 180px;
+}
+.endpointDesc {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.detailActions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
 }
 
 @media (max-width: 700px) {
