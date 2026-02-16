@@ -94,14 +94,22 @@
                         >
                             Halt
                         </button>
-                        <button
-                            v-else
-                            class="danger"
-                            @click="destroy(a)"
-                            title="destroy"
-                        >
-                            Destroy
-                        </button>
+                        <template v-else>
+                            <button
+                                class="activate"
+                                @click="activate(a)"
+                                title="activate"
+                            >
+                                Activate
+                            </button>
+                            <button
+                                class="danger"
+                                @click="destroy(a)"
+                                title="destroy"
+                            >
+                                Destroy
+                            </button>
+                        </template>
 
                         <button class="ghost" @click="edit(a)" title="edit">
                             Edit
@@ -262,6 +270,10 @@ function fmtMs(ms) {
 
 function halt(agent) {
     agent.state = "halted";
+}
+
+function activate(agent) {
+    agent.state = "running";
 }
 
 function destroy(agent) {
@@ -490,6 +502,13 @@ button.danger {
 }
 button.danger:hover {
     border-color: var(--danger);
+}
+button.activate {
+    border-color: color-mix(in oklab, #4ade80 80%, var(--border));
+    color: #4ade80;
+}
+button.activate:hover {
+    border-color: #4ade80;
 }
 
 button.ghost {
