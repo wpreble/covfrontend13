@@ -230,9 +230,11 @@ const PROGRAM_ID = new PublicKey(
 );
 
 const LAMPORTS_PER_SOL = 1_000_000_000;
+const MOCK_WALLET_ADDRESS = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU";
 
 const busy = ref(false);
 const error = ref("");
+const simMode = ref(false);
 
 const wallet = reactive({
     connected: false,
@@ -308,10 +310,13 @@ function solToLamportsBn(solString) {
     return new BN(lamportsStr || "0");
 }
 
+function hasRealPhantom() {
+    return !!window?.phantom?.solana?.isPhantom;
+}
+
 function getProvider() {
-    const provider = window?.phantom?.solana;
-    if (!provider?.isPhantom) throw new Error("Phantom wallet not found");
-    return provider;
+    if (hasRealPhantom()) return window.phantom.solana;
+    return null;
 }
 
 function getConnection() {
@@ -325,7 +330,6 @@ function getAnchorProvider() {
 }
 
 function getProgram(provider) {
-    // This form is the most compatible across Anchor versions:
     return new Program(idl, provider);
 }
 
@@ -346,8 +350,38 @@ function derivePdas(userPk) {
     return { ledgerPda, vaultPda, configPda };
 }
 
+function loadMockData() {
+    const addr = localStorage.getItem("mock_wallet") || MOCK_WALLET_ADDRESS;
+    wallet.connected = true;
+    wallet.pubkey = addr;
+    wallet.short = shortPk(addr);
+    wallet.ledgerPdaShort = "Ldgr…8xQ2";
+    wallet.vaultPdaShort = "Vlt…4mKe";
+
+    config.treasuryShort = "Trsy…9wPq";
+    config.serviceSignerShort = "Svc…3nRj";
+
+    ledger.initialized = true;
+    ledger.balance = 2_750_000_000;
+    ledger.chargingEnabled = true;
+    ledger.maxPerCharge = 50_000_000;
+    ledger.maxTotal = 1_000_000_000;
+    ledger.totalCharged = 187_500_000;
+    ledger.nonce = 14;
+
+    vaultBalanceLamports.value = 2_750_000_000;
+}
+
 async function ensureWalletConnected() {
+    if (simMode.value) return;
+
     const phantom = getProvider();
+    if (!phantom) {
+        simMode.value = true;
+        loadMockData();
+        return;
+    }
+
     if (!phantom.publicKey) await phantom.connect();
 
     wallet.connected = true;
@@ -362,7 +396,6 @@ async function ensureWalletConnected() {
 }
 
 async function fetchConfig(program, configPda) {
-    // If config isn't initialized yet, this will throw; we handle it gracefully.
     try {
         const cfg = await program.account.config.fetch(configPda);
         config.treasury = cfg.treasury;
@@ -389,7 +422,6 @@ async function fetchLedger(program, ledgerPda) {
         ledger.totalCharged = Number(acc.totalCharged);
         ledger.nonce = Number(acc.nonce);
     } catch {
-        // You said "assume initialize_user was called before", but if not:
         ledger.initialized = false;
         ledger.balance = 0;
         ledger.chargingEnabled = false;
@@ -413,6 +445,12 @@ async function refreshAll() {
     try {
         await ensureWalletConnected();
 
+        // In simulation mode, just show mock data
+        if (simMode.value) {
+            loadMockData();
+            return;
+        }
+
         const provider = getAnchorProvider();
         const program = getProgram(provider);
 
@@ -422,7 +460,13 @@ async function refreshAll() {
         await fetchLedger(program, ledgerPda);
         await fetchVaultLamports(provider.connection, vaultPda);
     } catch (e) {
-        error.value = e?.message || String(e);
+        // If RPC/wallet fails, fall back to sim
+        if (!simMode.value) {
+            simMode.value = true;
+            loadMockData();
+        } else {
+            error.value = e?.message || String(e);
+        }
     } finally {
         busy.value = false;
     }
@@ -432,16 +476,26 @@ async function refreshAll() {
    RPC CALLS
 =========== */
 
+async function simulateDelay() {
+    await new Promise((r) => setTimeout(r, 500 + Math.random() * 800));
+}
+
 async function deposit() {
     busy.value = true;
     error.value = "";
     try {
-        await ensureWalletConnected();
+        if (simMode.value) {
+            await simulateDelay();
+            const amt = solToLamportsBn(ui.amountSol);
+            ledger.balance += amt.toNumber();
+            vaultBalanceLamports.value = ledger.balance;
+            return;
+        }
 
+        await ensureWalletConnected();
         const provider = getAnchorProvider();
         const program = getProgram(provider);
         const user = wallet.pubkey;
-
         const { ledgerPda, vaultPda } = derivePdas(user);
         const amountLamports = solToLamportsBn(ui.amountSol);
         if (amountLamports.lte(new BN(0))) throw new Error("Invalid amount");
@@ -452,9 +506,7 @@ async function deposit() {
                 user,
                 ledger: ledgerPda,
                 vault: vaultPda,
-                systemProgram: new PublicKey(
-                    "11111111111111111111111111111111",
-                ),
+                systemProgram: new PublicKey("11111111111111111111111111111111"),
             })
             .rpc();
 
@@ -470,12 +522,18 @@ async function withdraw() {
     busy.value = true;
     error.value = "";
     try {
-        await ensureWalletConnected();
+        if (simMode.value) {
+            await simulateDelay();
+            const amt = solToLamportsBn(ui.amountSol);
+            ledger.balance = Math.max(0, ledger.balance - amt.toNumber());
+            vaultBalanceLamports.value = ledger.balance;
+            return;
+        }
 
+        await ensureWalletConnected();
         const provider = getAnchorProvider();
         const program = getProgram(provider);
         const user = wallet.pubkey;
-
         const { ledgerPda, vaultPda } = derivePdas(user);
         const amountLamports = solToLamportsBn(ui.amountSol);
         if (amountLamports.lte(new BN(0))) throw new Error("Invalid amount");
@@ -486,9 +544,7 @@ async function withdraw() {
                 user,
                 ledger: ledgerPda,
                 vault: vaultPda,
-                systemProgram: new PublicKey(
-                    "11111111111111111111111111111111",
-                ),
+                systemProgram: new PublicKey("11111111111111111111111111111111"),
             })
             .rpc();
 
@@ -503,14 +559,19 @@ async function withdraw() {
 async function enableCharging() {
     busy.value = true;
     error.value = "";
-    console.log("stgarting");
     try {
-        await ensureWalletConnected();
+        if (simMode.value) {
+            await simulateDelay();
+            ledger.chargingEnabled = true;
+            ledger.maxPerCharge = solToLamportsBn(ui.maxPerChargeSol).toNumber();
+            ledger.maxTotal = solToLamportsBn(ui.maxTotalSol).toNumber();
+            return;
+        }
 
+        await ensureWalletConnected();
         const provider = getAnchorProvider();
         const program = getProgram(provider);
         const user = wallet.pubkey;
-
         const { ledgerPda } = derivePdas(user);
         const maxPer = solToLamportsBn(ui.maxPerChargeSol);
         const maxTot = solToLamportsBn(ui.maxTotalSol);
@@ -519,16 +580,11 @@ async function enableCharging() {
 
         await program.methods
             .enableCharging(maxPer, maxTot)
-            .accounts({
-                user,
-                ledger: ledgerPda,
-            })
+            .accounts({ user, ledger: ledgerPda })
             .rpc();
 
         await refreshAll();
-        console.log("finsihed");
     } catch (e) {
-        console.log("error", e?.message);
         error.value = e?.message || String(e);
     } finally {
         busy.value = false;
@@ -539,20 +595,21 @@ async function stopCharging() {
     busy.value = true;
     error.value = "";
     try {
-        await ensureWalletConnected();
+        if (simMode.value) {
+            await simulateDelay();
+            ledger.chargingEnabled = false;
+            return;
+        }
 
+        await ensureWalletConnected();
         const provider = getAnchorProvider();
         const program = getProgram(provider);
         const user = wallet.pubkey;
-
         const { ledgerPda } = derivePdas(user);
 
         await program.methods
             .disableCharging()
-            .accounts({
-                user,
-                ledger: ledgerPda,
-            })
+            .accounts({ user, ledger: ledgerPda })
             .rpc();
 
         await refreshAll();

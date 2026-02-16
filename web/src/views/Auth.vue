@@ -54,6 +54,10 @@
                             >
                             <span>•</span>
                             <span>Localnet</span>
+                            <template v-if="walletAddress">
+                                <span>•</span>
+                                <span class="mono">{{ walletAddress.slice(0, 4) }}…{{ walletAddress.slice(-4) }}</span>
+                            </template>
                         </div>
                     </div>
 
@@ -133,8 +137,53 @@ const busy = ref(false);
 const error = ref("");
 const jwt = ref(localStorage.getItem("jwt") || "");
 const isInitialized = ref(false);
-// Detect if a previous session stored a mock token
 const isMockMode = ref(jwt.value.startsWith("mock."));
+const walletAddress = ref(localStorage.getItem("mock_wallet") || "");
+
+/* =====================
+   SIMULATED WALLET
+===================== */
+
+const MOCK_WALLET_ADDRESS = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU";
+
+function hasRealPhantom() {
+    return !!window?.phantom?.solana?.isPhantom;
+}
+
+function createSimulatedWallet() {
+    let connected = false;
+    const addr = MOCK_WALLET_ADDRESS;
+
+    return {
+        isPhantom: true,
+        isSimulated: true,
+        publicKey: null,
+        async connect() {
+            // Simulate a brief connection delay
+            await new Promise((r) => setTimeout(r, 600));
+            connected = true;
+            this.publicKey = { toString: () => addr, toBuffer: () => Buffer.alloc(32) };
+            return { publicKey: this.publicKey };
+        },
+        async disconnect() {
+            connected = false;
+            this.publicKey = null;
+        },
+        async signMessage(msg) {
+            // Return a fake 64-byte signature
+            await new Promise((r) => setTimeout(r, 400));
+            return { signature: new Uint8Array(64).fill(1) };
+        },
+    };
+}
+
+function getProvider() {
+    if (hasRealPhantom()) {
+        return window.phantom.solana;
+    }
+    // Fall back to simulated wallet for demos
+    return createSimulatedWallet();
+}
 
 /* =====================
    WALLET
@@ -169,14 +218,6 @@ async function checkLedgerStatusBackend() {
     } finally {
         busy.value = false;
     }
-}
-
-function getProvider() {
-    const provider = window?.phantom?.solana;
-    if (!provider?.isPhantom) {
-        throw new Error("Phantom wallet not found");
-    }
-    return provider;
 }
 
 /* =====================
@@ -262,14 +303,17 @@ function disconnect() {
     jwt.value = "";
     isMockMode.value = false;
     isInitialized.value = false;
+    walletAddress.value = "";
     error.value = "";
     localStorage.removeItem("jwt");
+    localStorage.removeItem("mock_wallet");
 
     try {
-        const phantom = getProvider();
-        phantom.disconnect();
+        if (hasRealPhantom()) {
+            window.phantom.solana.disconnect();
+        }
     } catch {
-        // Phantom not available — that's fine
+        // fine
     }
 }
 
@@ -287,8 +331,20 @@ async function connectWalletAndAuth() {
         await phantom.connect();
 
         const wallet_key = phantom.publicKey.toString();
+        walletAddress.value = wallet_key;
+        localStorage.setItem("mock_wallet", wallet_key);
 
-        // Try real backend auth first
+        // If using simulated wallet, skip backend entirely
+        if (phantom.isSimulated) {
+            isMockMode.value = true;
+            const mockToken = createMockJWT(wallet_key);
+            jwt.value = mockToken;
+            localStorage.setItem("jwt", mockToken);
+            isInitialized.value = true;
+            return;
+        }
+
+        // Try real backend auth
         try {
             const ch = await getChallenge(wallet_key);
 
@@ -305,7 +361,6 @@ async function connectWalletAndAuth() {
             jwt.value = data.token;
             localStorage.setItem("jwt", data.token);
 
-            // Try to create user (ignore if backend unavailable)
             try {
                 await createUser(wallet_key);
             } catch (e) {
@@ -314,7 +369,6 @@ async function connectWalletAndAuth() {
 
             isInitialized.value = await checkInitialized(phantom.publicKey);
         } catch (backendError) {
-            // If backend is unavailable, fall back to mock mode for demo
             if (isBackendError(backendError)) {
                 console.warn(
                     "Backend unavailable — falling back to demo mode.",
@@ -326,7 +380,6 @@ async function connectWalletAndAuth() {
                 jwt.value = mockToken;
                 localStorage.setItem("jwt", mockToken);
 
-                // On-chain check still works via Solana RPC (no backend needed)
                 try {
                     isInitialized.value = await checkInitialized(
                         phantom.publicKey,
@@ -335,7 +388,6 @@ async function connectWalletAndAuth() {
                     isInitialized.value = false;
                 }
             } else {
-                // Real error (e.g. user rejected Phantom prompt), re-throw
                 throw backendError;
             }
         }

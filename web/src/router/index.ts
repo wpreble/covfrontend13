@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import Agents from "../views/Agents.vue";
 import Payments from "../views/Payments.vue";
 import Compute from "../views/Compute.vue";
-import Build from "../views/Build.vue";
+import CovenantClaw from "../views/CovenantClaw.vue";
 import Auth from "../views/Auth.vue";
 
 export function hasJwt(): boolean {
@@ -36,10 +36,16 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: "/build",
-      name: "Build",
-      component: Build,
+      path: "/covenantclaw",
+      name: "CovenantClaw",
+      component: CovenantClaw,
       meta: { requiresAuth: true },
+    },
+
+    // legacy redirect
+    {
+      path: "/build",
+      redirect: "/covenantclaw",
     },
 
     // legacy redirect

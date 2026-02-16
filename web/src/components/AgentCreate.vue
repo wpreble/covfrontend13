@@ -94,11 +94,48 @@
                         <div class="panelHead">
                             <div class="panelTitle">Pick a template</div>
                             <div class="hint">
-                                Square tiles · minimal · black/white
+                                Choose a model, then select a template
                             </div>
                         </div>
 
                         <div class="panelScroll">
+                            <!-- Model selector -->
+                            <div class="modelSection">
+                                <div class="modelTabs">
+                                    <button
+                                        class="modelTab"
+                                        :class="{ active: modelCategory === 'standard' }"
+                                        @click="modelCategory = 'standard'; selectedModelId = 'gpt-4o'"
+                                    >
+                                        Standard
+                                    </button>
+                                    <button
+                                        class="modelTab"
+                                        :class="{ active: modelCategory === 'finetuned' }"
+                                        @click="modelCategory = 'finetuned'; selectedModelId = 'ft-qwen3-covenant'"
+                                    >
+                                        Fine-tuned
+                                    </button>
+                                </div>
+
+                                <div class="modelList">
+                                    <button
+                                        v-for="m in activeModels"
+                                        :key="m.id"
+                                        class="modelRow"
+                                        :class="{ selected: selectedModelId === m.id }"
+                                        @click="selectedModelId = m.id"
+                                    >
+                                        <div class="modelName">{{ m.name }}</div>
+                                        <div class="modelMeta mono">
+                                            <span>{{ m.params }}</span>
+                                            <span>{{ m.ctx }} ctx</span>
+                                            <span>{{ m.costPerMTok }}/MTok</span>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
                             <div
                                 class="grid"
                                 role="list"
@@ -456,6 +493,40 @@ const templates = ref<Template[]>([
 const selectedTemplateId = ref("");
 const prompt = ref("");
 const toast = ref("");
+
+/* =====================
+   MODEL SELECTION
+===================== */
+
+type Model = {
+    id: string;
+    name: string;
+    params: string;
+    ctx: string;
+    costPerMTok: string;
+};
+
+const modelCategory = ref<"standard" | "finetuned">("standard");
+
+const standardModels: Model[] = [
+    { id: "gpt-4o", name: "GPT-4o", params: "—", ctx: "128k", costPerMTok: "$2.50" },
+    { id: "claude-sonnet-4", name: "Claude Sonnet 4", params: "—", ctx: "200k", costPerMTok: "$3.00" },
+    { id: "kimi-k2", name: "Kimi K2", params: "1T MoE", ctx: "128k", costPerMTok: "$0.60" },
+    { id: "minimax-m1", name: "MiniMax-M1", params: "456B", ctx: "1M", costPerMTok: "$1.10" },
+    { id: "qwen-3-235b", name: "Qwen 3 235B", params: "235B MoE", ctx: "128k", costPerMTok: "$0.80" },
+    { id: "deepseek-v3", name: "DeepSeek V3", params: "671B MoE", ctx: "128k", costPerMTok: "$0.90" },
+];
+
+const finetunedModels: Model[] = [
+    { id: "ft-qwen3-covenant", name: "Qwen 3 235B · Covenant Custom", params: "235B MoE (FT)", ctx: "128k", costPerMTok: "$1.40" },
+    { id: "ft-minimax-m1-ops", name: "MiniMax-M1 · Ops Fine-tune", params: "456B (FT)", ctx: "1M", costPerMTok: "$1.80" },
+];
+
+const selectedModelId = ref("gpt-4o");
+
+const activeModels = computed(() =>
+    modelCategory.value === "standard" ? standardModels : finetunedModels,
+);
 
 const refineLoading = ref(false);
 const refineSchema = ref<RefineSchema | null>(null);
@@ -820,6 +891,74 @@ async function deploy() {
     justify-content: space-between;
     gap: 12px;
     background: #000;
+}
+
+/* Model selector */
+.modelSection {
+    margin-bottom: 16px;
+}
+.modelTabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.modelTab {
+    appearance: none;
+    border: 0;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.modelTab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+.modelTab.active {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+.modelList {
+    display: grid;
+    gap: 4px;
+}
+.modelRow {
+    appearance: none;
+    border: 0;
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    transition: background 0.1s ease;
+    text-align: left;
+}
+.modelRow:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+.modelRow.selected {
+    background: rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.modelName {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.modelMeta {
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    opacity: 0.55;
+    white-space: nowrap;
 }
 
 /* Tiles */
