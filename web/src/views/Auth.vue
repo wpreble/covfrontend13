@@ -616,11 +616,11 @@ button:disabled {
 .createBtn {
     border: 1px solid var(--fg);
     background: var(--fg);
-    color: #000;
+    color: var(--btn-primary-fg);
 }
 .createBtn:hover {
-    background: #fff;
-    border-color: #fff;
+    background: var(--btn-primary-bg);
+    border-color: var(--fg);
 }
 
 .mono {

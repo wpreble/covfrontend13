@@ -24,7 +24,7 @@
 
                 <div class="cc-model-badge">
                     <span class="cc-model-dot"></span>
-                    Default Model: <strong>Kimi 2.5 "Secure"</strong>
+                    Default Model: <strong>Kimi 2.5</strong> — Secure US-based deployment
                 </div>
 
                 <button class="cc-deploy-btn" @click="startOnboarding">
@@ -55,15 +55,23 @@
                             v-for="m in models"
                             :key="m.id"
                             class="cc-model-card"
-                            :class="{ selected: selectedModel === m.id }"
+                            :class="{ selected: selectedModel === m.id, 'has-warning': m.warning }"
                             @click="selectedModel = m.id"
                         >
                             <div class="cc-mc-top">
                                 <span class="cc-mc-icon">{{ m.icon }}</span>
-                                <span v-if="m.recommended" class="cc-mc-badge">Recommended</span>
+                                <div class="cc-mc-badges">
+                                    <span v-if="m.recommended" class="cc-mc-badge">Recommended</span>
+                                    <span v-if="m.badge" class="cc-mc-badge secure">{{ m.badge }}</span>
+                                </div>
                             </div>
                             <strong>{{ m.name }}</strong>
                             <p>{{ m.desc }}</p>
+                            <div v-if="m.warning" class="cc-mc-warning">
+                                <span class="cc-mc-warn-icon">&#9888;</span>
+                                {{ m.warning }}
+                            </div>
+                            <div class="cc-mc-pricing">{{ m.pricing }}</div>
                         </button>
                     </div>
                 </div>
@@ -113,6 +121,10 @@
                             <div class="cc-review-item">
                                 <span class="cc-review-icon">{{ models.find(m => m.id === selectedModel)?.icon }}</span>
                                 <span>{{ models.find(m => m.id === selectedModel)?.name }}</span>
+                                <span class="cc-review-pricing">{{ models.find(m => m.id === selectedModel)?.pricing }}</span>
+                            </div>
+                            <div v-if="models.find(m => m.id === selectedModel)?.warning" class="cc-review-warning">
+                                &#9888; {{ models.find(m => m.id === selectedModel)?.warning }}
                             </div>
                         </div>
 
@@ -361,31 +373,43 @@ const selectedModel = ref("kimi-25-secure");
 const models = [
     {
         id: "kimi-25-secure",
-        name: 'Kimi 2.5 "Secure"',
+        name: "Kimi 2.5",
         icon: "🛡️",
-        desc: "Privacy-focused reasoning model with strong tool-use capabilities. Optimized for sovereign deployments.",
+        desc: "Secure US-based deployment of Kimi 2.5. Strong reasoning and tool-use capabilities with data staying on Covenant infrastructure.",
         recommended: true,
+        badge: "Secure",
+        warning: null,
+        pricing: "Per API call",
     },
     {
-        id: "claude-4-opus",
-        name: "Claude 4 Opus",
+        id: "opus-46",
+        name: "Opus 4.6",
         icon: "🧠",
-        desc: "Deep reasoning and analysis. Excellent for complex multi-step tasks and code generation.",
+        desc: "Anthropic's most capable reasoning model. Excellent for complex multi-step tasks, code generation, and deep analysis.",
         recommended: false,
+        badge: null,
+        warning: "Data will be exposed directly to Anthropic",
+        pricing: "Per API call",
     },
     {
-        id: "gpt-5",
-        name: "GPT-5",
+        id: "gpt-52",
+        name: "GPT 5.2",
         icon: "⚡",
-        desc: "Fast, versatile general-purpose model. Good balance of speed and capability.",
+        desc: "OpenAI's flagship model. Fast, versatile general-purpose model with strong capability across all tasks.",
         recommended: false,
+        badge: null,
+        warning: "Data will be exposed directly to OpenAI",
+        pricing: "Per API call",
     },
     {
-        id: "deepseek-r2",
-        name: "DeepSeek R2",
-        icon: "🔬",
-        desc: "Open-weight reasoning model. Strong at code, math, and structured tasks.",
+        id: "minimax-25-dedicated",
+        name: "MiniMax 2.5",
+        icon: "🔒",
+        desc: "MiniMax 2.5 running on dedicated Covenant compute. Full data isolation — no third-party API calls. Control your model uptime in the Compute tab.",
         recommended: false,
+        badge: "Most Secure",
+        warning: null,
+        pricing: "$18.50/hr dedicated compute",
     },
 ];
 
@@ -715,13 +739,13 @@ function resetDemo() {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle, #ffffff08 0%, transparent 70%);
+    background: radial-gradient(circle, var(--hover-bg) 0%, transparent 70%);
     animation: cc-pulse 3s ease-in-out infinite;
 }
 
 @keyframes cc-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 #ffffff10; }
-    50% { box-shadow: 0 0 40px 8px #ffffff08; }
+    0%, 100% { box-shadow: 0 0 0 0 var(--hover-bg); }
+    50% { box-shadow: 0 0 40px 8px var(--hover-bg); }
 }
 
 .cc-logo-inner {
@@ -945,6 +969,12 @@ function resetDemo() {
     font-size: 24px;
 }
 
+.cc-mc-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
 .cc-mc-badge {
     font-size: 10px;
     padding: 3px 8px;
@@ -954,6 +984,11 @@ function resetDemo() {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.cc-mc-badge.secure {
+    background: #3b82f620;
+    color: #60a5fa;
 }
 
 .cc-model-card strong {
@@ -967,6 +1002,38 @@ function resetDemo() {
     font-size: 11px;
     color: var(--muted);
     line-height: 1.5;
+}
+
+.cc-mc-warning {
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #f59e0b12;
+    border: 1px solid #f59e0b30;
+    font-size: 10px;
+    color: #fbbf24;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    line-height: 1.4;
+}
+
+.cc-mc-warn-icon {
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.cc-model-card.has-warning:not(.selected) {
+    border-color: #f59e0b25;
+}
+
+.cc-mc-pricing {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
 }
 
 /* Integration Grid */
@@ -1159,6 +1226,26 @@ function resetDemo() {
     font-size: 20px;
 }
 
+.cc-review-pricing {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.cc-review-warning {
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #f59e0b12;
+    border: 1px solid #f59e0b30;
+    font-size: 11px;
+    color: #fbbf24;
+    line-height: 1.4;
+}
+
 .cc-review-tags {
     display: flex;
     flex-wrap: wrap;
@@ -1252,7 +1339,7 @@ function resetDemo() {
     border-radius: 10px;
     border: none;
     background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
-    color: #000000;
+    color: var(--btn-primary-fg);
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -1275,8 +1362,8 @@ function resetDemo() {
 .cc-spinner {
     width: 14px;
     height: 14px;
-    border: 2px solid rgba(0, 0, 0, 0.25);
-    border-top-color: #000000;
+    border: 2px solid var(--border);
+    border-top-color: var(--btn-primary-fg);
     border-radius: 50%;
     animation: cc-spin 0.6s linear infinite;
 }

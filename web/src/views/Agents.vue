@@ -352,7 +352,7 @@ function create() {
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 12px;
-    background: #0f0f12;
+    background: var(--chip);
     min-height: 68px;
     display: flex;
     flex-direction: column;
@@ -450,7 +450,7 @@ button.ghost:hover {
 }
 .composer {
     border: 1px solid var(--border);
-    background: rgba(17, 17, 19, 0.92);
+    background: var(--card);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-radius: 999px;
@@ -467,20 +467,20 @@ button.ghost:hover {
     border: 1px solid var(--border);
     outline: none;
     font-size: 14px;
-    background: #0e0e11;
+    background: var(--input-bg);
     color: var(--fg);
 }
 .composer input::placeholder {
-    color: #666;
+    color: var(--muted);
 }
 
 .createBtn {
     border: 1px solid var(--fg);
     background: var(--fg);
-    color: #000;
+    color: var(--btn-primary-fg);
 }
 .createBtn:hover {
-    background: #fff;
-    border-color: #fff;
+    background: var(--btn-primary-bg);
+    border-color: var(--fg);
 }
 </style>

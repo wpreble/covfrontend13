@@ -133,7 +133,7 @@ h2 {
     position: relative;
     border: 1px solid var(--border);
     border-radius: 14px;
-    background: #0f0f12;
+    background: var(--chip);
     overflow: hidden;
     height: 100vh;
     /* keeps it nice + consistent */
@@ -162,9 +162,9 @@ h2 {
     width: 10px;
     height: 10px;
     border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--border);
     pointer-events: none;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 0 3px var(--hover-bg);
 }
 
 .pin.conduit {

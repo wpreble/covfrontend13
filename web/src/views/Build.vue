@@ -253,7 +253,7 @@ function useTemplate(t) {
         border-color 0.12s ease;
 }
 .templateBtn:hover {
-    background: #ffffff0a;
+    background: var(--hover-bg);
     border-color: var(--fg);
 }
 
@@ -307,8 +307,8 @@ function useTemplate(t) {
 }
 
 .msg.user .msgBubble {
-    background: #ffffff0d;
-    border-color: #ffffff20;
+    background: var(--hover-bg);
+    border-color: var(--border);
 }
 
 .msgRole {
@@ -334,7 +334,7 @@ function useTemplate(t) {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
         monospace;
     font-size: 12px;
-    background: #ffffff12;
+    background: var(--chip);
     padding: 2px 5px;
     border-radius: 4px;
 }
@@ -343,7 +343,7 @@ function useTemplate(t) {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
         monospace;
     font-size: 12px;
-    background: #0a0a0e;
+    background: var(--code-bg);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 14px;
@@ -414,12 +414,12 @@ function useTemplate(t) {
     border: 1px solid var(--border);
     outline: none;
     font-size: 13px;
-    background: #0e0e11;
+    background: var(--input-bg);
     color: var(--fg);
     transition: border-color 0.15s ease;
 }
 .chatInput::placeholder {
-    color: #555;
+    color: var(--muted);
 }
 .chatInput:focus {
     border-color: var(--fg);
@@ -429,7 +429,7 @@ function useTemplate(t) {
     border-radius: 12px;
     border: 1px solid var(--fg);
     background: var(--fg);
-    color: #000;
+    color: var(--btn-primary-fg);
     padding: 12px 20px;
     font-size: 13px;
     font-weight: 600;
@@ -440,7 +440,7 @@ function useTemplate(t) {
     white-space: nowrap;
 }
 .sendBtn:hover {
-    background: #ffffff;
+    background: var(--btn-primary-bg);
 }
 .sendBtn:disabled {
     opacity: 0.35;

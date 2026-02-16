@@ -98,8 +98,8 @@
                                     @click="selectedGpu = gpu.id"
                                 >
                                     <div class="gpuName">{{ gpu.name }}</div>
-                                    <div class="gpuMeta">{{ gpu.vram }} VRAM</div>
-                                    <div class="gpuMeta">{{ gpu.throughput }}</div>
+                                    <div class="gpuMeta">{{ gpu.vram }} VRAM &middot; {{ gpu.throughput }}</div>
+                                    <div class="gpuPrice">${{ gpu.price.toFixed(2) }}<span class="gpuPriceUnit">/hr</span></div>
                                     <span v-if="gpu.recommended" class="gpuBadge">Recommended</span>
                                 </button>
                             </div>
@@ -145,82 +145,91 @@
         </template>
 
         <template v-if="activeTab === 'command'">
-            <section class="card">
+            <section class="card deployedCard">
                 <div class="head">
                     <h3>Active Deployments</h3>
-                    <span class="pill">{{ activeDeployments.filter(d => d.status === 'running').length }} running</span>
+                    <span class="pill" v-if="activeDeployments.filter(d => d.status === 'running').length">
+                        {{ activeDeployments.filter(d => d.status === 'running').length }} running
+                    </span>
                 </div>
 
-                <div v-if="activeDeployments.length === 0" class="emptyState">
-                    <p>No active deployments. Deploy a model to get started.</p>
+                <div v-if="activeDeployments.length > 0" class="costSummary">
+                    <div class="costItem">
+                        <span class="costLabel">Running cost</span>
+                        <span class="costValue">${{ totalRunningCostPerHr }}<span class="costUnit">/hr</span></span>
+                    </div>
+                    <div class="costDivider"></div>
+                    <div class="costItem">
+                        <span class="costLabel">Total accrued</span>
+                        <span class="costValue">${{ totalAccruedCost }}</span>
+                    </div>
                 </div>
 
-                <div v-else class="tableWrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Model</th>
-                                <th>GPU</th>
-                                <th>Region</th>
-                                <th>Status</th>
-                                <th>Uptime</th>
-                                <th>Requests</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="d in activeDeployments" :key="d.id">
-                                <td class="mono">{{ d.model }}</td>
-                                <td class="mono">{{ d.gpu }}</td>
-                                <td>{{ d.region }}</td>
-                                <td>
-                                    <span class="statusBadge" :class="d.status">{{ d.status }}</span>
-                                </td>
-                                <td class="mono tiny">{{ d.uptime }}</td>
-                                <td class="mono tiny">{{ d.requests }}</td>
-                                <td>
-                                    <button class="actionBtn stop" v-if="d.status === 'running'" @click="stopDeployment(d.id)">
-                                        Stop
-                                    </button>
-                                    <button class="actionBtn start" v-else-if="d.status === 'stopped'" @click="startDeployment(d.id)">
-                                        Start
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div v-if="activeDeployments.length === 0" class="emptyDeployed">
+                    <div class="emptyIcon">⬡</div>
+                    <p>No models deployed yet</p>
+                    <span class="emptyHint">Deploy a model above to see it here</span>
                 </div>
-            </section>
 
-            <section class="card">
-                <div class="head">
-                    <h3>Deployment History</h3>
-                </div>
-                <div class="tableWrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Model</th>
-                                <th>GPU</th>
-                                <th>Region</th>
-                                <th>Status</th>
-                                <th>Deployed</th>
-                                <th>Duration</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="d in deploymentHistory" :key="d.id">
-                                <td class="mono">{{ d.model }}</td>
-                                <td class="mono">{{ d.gpu }}</td>
-                                <td>{{ d.region }}</td>
-                                <td>
-                                    <span class="statusBadge" :class="d.status">{{ d.status }}</span>
-                                </td>
-                                <td class="mono tiny">{{ d.deployed }}</td>
-                                <td class="mono tiny">{{ d.duration }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div v-else class="deployedGrid">
+                    <div
+                        v-for="d in activeDeployments"
+                        :key="d.id"
+                        class="deployedItem"
+                        :class="d.status"
+                    >
+                        <div class="deployedTop">
+                            <span class="deployedDot" :class="d.status"></span>
+                            <strong class="deployedName">{{ d.model }}</strong>
+                            <span class="statusBadge" :class="d.status">{{ d.status }}</span>
+                        </div>
+
+                        <div class="deployedPricing">
+                            <span class="dpRate">${{ (gpuPriceMap[d.gpu] || 0).toFixed(2) }}<span class="dpUnit">/hr</span></span>
+                            <span class="dpAccrued" :class="{ stopped: d.status === 'stopped' }">
+                                {{ d.status === 'stopped' ? 'Stopped' : 'Accrued' }}: ${{ calcAccrued(d) }}
+                            </span>
+                        </div>
+
+                        <div class="deployedMeta">
+                            <div class="deployedMetaRow">
+                                <span class="deployedK">GPU</span>
+                                <span class="deployedV mono">{{ d.gpu }}</span>
+                            </div>
+                            <div class="deployedMetaRow">
+                                <span class="deployedK">Region</span>
+                                <span class="deployedV">{{ d.region }}</span>
+                            </div>
+                            <div class="deployedMetaRow">
+                                <span class="deployedK">Uptime</span>
+                                <span class="deployedV mono">{{ d.uptime }}</span>
+                            </div>
+                            <div class="deployedMetaRow">
+                                <span class="deployedK">Requests</span>
+                                <span class="deployedV mono">{{ d.requests }}</span>
+                            </div>
+                        </div>
+
+                        <div class="deployedActions">
+                            <button class="depActBtn view" @click="viewDeployment(d)">View</button>
+                            <button class="depActBtn edit" @click="editDeployment(d)">Edit</button>
+                            <button
+                                v-if="d.status === 'running' || d.status === 'provisioning'"
+                                class="depActBtn stop"
+                                @click="stopDeployment(d.id)"
+                            >
+                                Stop
+                            </button>
+                            <button
+                                v-if="d.status === 'stopped'"
+                                class="depActBtn start"
+                                @click="startDeployment(d.id)"
+                            >
+                                Start
+                            </button>
+                            <button class="depActBtn destroy" @click="destroyDeployment(d.id)">Destroy</button>
+                        </div>
+                    </div>
                 </div>
             </section>
         </template>
@@ -453,25 +462,49 @@ const availableModels = [
 
 const gpuTiers = {
     small: [
-        { id: "rtx-4090", name: "NVIDIA RTX 4090", vram: "24 GB", throughput: "~35 tok/s", recommended: true },
-        { id: "l40s", name: "NVIDIA L40S", vram: "48 GB", throughput: "~50 tok/s", recommended: false },
-        { id: "a100-40", name: "NVIDIA A100 40GB", vram: "40 GB", throughput: "~60 tok/s", recommended: false },
+        { id: "rtx-4090", name: "NVIDIA RTX 4090", vram: "24 GB", throughput: "~35 tok/s", price: 0.74, recommended: true },
+        { id: "l40s", name: "NVIDIA L40S", vram: "48 GB", throughput: "~50 tok/s", price: 0.89, recommended: false },
+        { id: "a100-40", name: "NVIDIA A100 40GB", vram: "40 GB", throughput: "~60 tok/s", price: 1.19, recommended: false },
     ],
     medium: [
-        { id: "a100-40", name: "NVIDIA A100 40GB", vram: "40 GB", throughput: "~40 tok/s", recommended: false },
-        { id: "a100-80", name: "NVIDIA A100 80GB", vram: "80 GB", throughput: "~55 tok/s", recommended: true },
-        { id: "h100", name: "NVIDIA H100 SXM", vram: "80 GB", throughput: "~80 tok/s", recommended: false },
+        { id: "a100-40", name: "NVIDIA A100 40GB", vram: "40 GB", throughput: "~40 tok/s", price: 1.19, recommended: false },
+        { id: "a100-80", name: "NVIDIA A100 80GB", vram: "80 GB", throughput: "~55 tok/s", price: 1.79, recommended: true },
+        { id: "h100", name: "NVIDIA H100 SXM", vram: "80 GB", throughput: "~80 tok/s", price: 2.49, recommended: false },
     ],
     large: [
-        { id: "a100-80", name: "NVIDIA A100 80GB", vram: "80 GB", throughput: "~35 tok/s", recommended: false },
-        { id: "h100", name: "NVIDIA H100 SXM", vram: "80 GB", throughput: "~60 tok/s", recommended: true },
-        { id: "h100x2", name: "2x NVIDIA H100 SXM", vram: "160 GB", throughput: "~100 tok/s", recommended: false },
+        { id: "a100-80", name: "NVIDIA A100 80GB", vram: "80 GB", throughput: "~35 tok/s", price: 1.79, recommended: false },
+        { id: "h100", name: "NVIDIA H100 SXM", vram: "80 GB", throughput: "~60 tok/s", price: 2.49, recommended: true },
+        { id: "h100x2", name: "2x NVIDIA H100 SXM", vram: "160 GB", throughput: "~100 tok/s", price: 4.98, recommended: false },
     ],
     xlarge: [
-        { id: "h100x4", name: "4x NVIDIA H100 SXM", vram: "320 GB", throughput: "~80 tok/s", recommended: false },
-        { id: "h100x8", name: "8x NVIDIA H100 SXM", vram: "640 GB", throughput: "~150 tok/s", recommended: true },
+        { id: "h100x4", name: "4x NVIDIA H100 SXM", vram: "320 GB", throughput: "~80 tok/s", price: 9.96, recommended: false },
+        { id: "h100x8", name: "8x NVIDIA H100 SXM", vram: "640 GB", throughput: "~150 tok/s", price: 19.92, recommended: true },
     ],
 };
+
+const gpuPriceMap = {
+    "RTX 4090": 0.74,
+    "L40S": 0.89,
+    "A100 40GB": 1.19,
+    "A100 80GB": 1.79,
+    "H100 SXM": 2.49,
+    "2x H100 SXM": 4.98,
+    "4x H100 SXM": 9.96,
+    "8x H100 SXM": 19.92,
+};
+
+function parseUptime(uptime) {
+    if (!uptime || uptime === "\u2014") return 0;
+    const dMatch = uptime.match(/(\d+)d/);
+    const hMatch = uptime.match(/(\d+)h/);
+    return (dMatch ? parseInt(dMatch[1]) * 24 : 0) + (hMatch ? parseInt(hMatch[1]) : 0);
+}
+
+function calcAccrued(dep) {
+    const rate = gpuPriceMap[dep.gpu] || 0;
+    const hours = parseUptime(dep.uptime);
+    return (rate * hours).toFixed(2);
+}
 
 const allModels = computed(() =>
     modelSource.value === "your" ? yourModels : availableModels
@@ -493,8 +526,21 @@ const selectedGpuObj = computed(() =>
 const activeDeployments = ref([
     { id: "dep-1", model: "Llama 3 8B (ft)", gpu: "RTX 4090", region: "US West", status: "running", uptime: "3d 14h", requests: "12,847" },
     { id: "dep-2", model: "Mistral 7B (ft)", gpu: "A100 80GB", region: "US East", status: "running", uptime: "7d 2h", requests: "45,201" },
-    { id: "dep-3", model: "Code Llama 34B (ft)", gpu: "H100 SXM", region: "US Central", status: "stopped", uptime: "—", requests: "8,412" },
+    { id: "dep-3", model: "Code Llama 34B (ft)", gpu: "H100 SXM", region: "US Central", status: "stopped", uptime: "2d 8h", requests: "8,412" },
 ]);
+
+const totalRunningCostPerHr = computed(() => {
+    return activeDeployments.value
+        .filter(d => d.status === "running")
+        .reduce((sum, d) => sum + (gpuPriceMap[d.gpu] || 0), 0)
+        .toFixed(2);
+});
+
+const totalAccruedCost = computed(() => {
+    return activeDeployments.value
+        .reduce((sum, d) => sum + parseFloat(calcAccrued(d)), 0)
+        .toFixed(2);
+});
 
 const deploymentHistory = ref([
     { id: "hist-1", model: "Llama 3 70B", gpu: "2x H100 SXM", region: "US East", status: "completed", deployed: "Jan 28, 2026", duration: "12d 6h" },
@@ -520,12 +566,45 @@ function deployModel() {
 
 function stopDeployment(id) {
     const dep = activeDeployments.value.find((d) => d.id === id);
-    if (dep) dep.status = "stopped";
+    if (dep) {
+        dep.status = "stopped";
+        dep.uptime = "—";
+    }
 }
 
 function startDeployment(id) {
     const dep = activeDeployments.value.find((d) => d.id === id);
-    if (dep) dep.status = "running";
+    if (dep) {
+        dep.status = "running";
+        dep.uptime = "0d 0h";
+    }
+}
+
+function destroyDeployment(id) {
+    const idx = activeDeployments.value.findIndex((d) => d.id === id);
+    if (idx !== -1) {
+        const dep = activeDeployments.value[idx];
+        deploymentHistory.value.unshift({
+            id: dep.id,
+            model: dep.model,
+            gpu: dep.gpu,
+            region: dep.region,
+            status: "completed",
+            deployed: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+            duration: dep.uptime === "—" ? "0d 0h" : dep.uptime,
+        });
+        activeDeployments.value.splice(idx, 1);
+    }
+}
+
+function viewDeployment(dep) {
+    activeTab.value = "command";
+}
+
+function editDeployment(dep) {
+    activeTab.value = "deploy";
+    modelSource.value = "your";
+    selectedModel.value = "";
 }
 
 function togglePopover(node, event) {
@@ -654,7 +733,7 @@ strong.online {
 .subtabs {
     display: flex;
     gap: 4px;
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--hover-bg);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 4px;
@@ -677,7 +756,7 @@ strong.online {
 }
 .subtab.active {
     background: var(--fg);
-    color: #000;
+    color: var(--btn-primary-fg);
 }
 
 /* CARDS */
@@ -738,7 +817,7 @@ h3 {
 .sourceToggle {
     display: flex;
     gap: 4px;
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--hover-bg);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 3px;
@@ -760,7 +839,7 @@ h3 {
 }
 .srcBtn.active {
     background: var(--fg);
-    color: #000;
+    color: var(--btn-primary-fg);
 }
 
 .selectWrap {
@@ -771,7 +850,7 @@ h3 {
     padding: 10px 14px;
     border-radius: 10px;
     border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--hover-bg);
     color: var(--fg);
     font-size: 13px;
     font-family: inherit;
@@ -808,14 +887,14 @@ h3 {
     padding: 14px;
     border-radius: 12px;
     border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--hover-bg);
     cursor: pointer;
     text-align: left;
     transition: all 0.15s ease;
     color: var(--fg);
 }
 .gpuCard:hover {
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: var(--border);
 }
 .gpuCard.selected {
     border-color: #22c55e;
@@ -833,6 +912,17 @@ h3 {
     font-size: 11px;
     color: var(--muted);
     line-height: 1.5;
+}
+.gpuPrice {
+    font-size: 15px;
+    font-weight: 700;
+    margin-top: 4px;
+    color: var(--fg);
+}
+.gpuPriceUnit {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
 }
 .gpuBadge {
     position: absolute;
@@ -853,7 +943,7 @@ h3 {
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 14px;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--hover-bg);
     display: grid;
     gap: 8px;
 }
@@ -875,7 +965,7 @@ h3 {
     border-radius: 10px;
     border: none;
     background: #22c55e;
-    color: #000;
+    color: var(--btn-primary-fg);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -966,7 +1056,7 @@ h3 {
     position: relative;
     border: 1px solid var(--border);
     border-radius: 14px 14px 0 0;
-    background: #0f0f12;
+    background: var(--chip);
     overflow: hidden;
     padding: 14px;
     aspect-ratio: 1.7;
@@ -1079,13 +1169,13 @@ tr:last-child td {
     border-bottom: none;
 }
 tr.selected td {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--hover-bg);
 }
 tr {
     cursor: pointer;
 }
 tr:hover td {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--hover-bg);
 }
 
 .statusBadge {
@@ -1123,7 +1213,7 @@ tr:hover td {
 .utilBar {
     height: 5px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--hover-bg);
     overflow: hidden;
     min-width: 60px;
 }
@@ -1152,7 +1242,7 @@ tr:hover td {
     padding: 10px;
     border-radius: 10px;
     border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--hover-bg);
 }
 .k {
     font-size: 11px;
@@ -1241,7 +1331,7 @@ tr:hover td {
     width: 48px;
     height: 4px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--chip);
     overflow: hidden;
     vertical-align: middle;
 }
@@ -1256,8 +1346,8 @@ tr:hover td {
     transform: translate(-50%, -50%) scale(1.5);
     z-index: 10;
     box-shadow:
-        0 0 0 4px rgba(255, 255, 255, 0.15),
-        0 0 20px rgba(255, 255, 255, 0.1);
+        0 0 0 4px var(--hover-bg),
+        0 0 20px var(--hover-bg);
 }
 
 .pop-enter-active {
@@ -1273,5 +1363,274 @@ tr:hover td {
 .pop-leave-to {
     opacity: 0;
     transform: scale(0.95);
+}
+
+/* ── YOUR DEPLOYED MODELS ── */
+.deployedCard {
+    /* inherits .card */
+}
+
+.emptyDeployed {
+    text-align: center;
+    padding: 32px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.emptyIcon {
+    font-size: 32px;
+    color: var(--muted);
+    opacity: 0.4;
+    margin-bottom: 4px;
+}
+
+.emptyDeployed p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--fg);
+    font-weight: 500;
+}
+
+.emptyHint {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.deployedGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.deployedItem {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    background: var(--hover-bg);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.15s ease;
+}
+
+.deployedItem.running {
+    border-color: rgba(34, 197, 94, 0.25);
+}
+
+.deployedItem.provisioning {
+    border-color: rgba(245, 158, 11, 0.25);
+}
+
+.deployedItem.stopped {
+    border-color: rgba(239, 68, 68, 0.15);
+    opacity: 0.75;
+}
+
+.deployedTop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.deployedDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.deployedDot.running {
+    background: #22c55e;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+.deployedDot.provisioning {
+    background: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+}
+
+.deployedDot.stopped {
+    background: #ef4444;
+}
+
+.deployedName {
+    font-size: 13px;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.costSummary {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--chip);
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+}
+
+.costItem {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.costLabel {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 600;
+}
+
+.costValue {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+.costUnit {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.costDivider {
+    width: 1px;
+    height: 32px;
+    background: var(--border);
+}
+
+.deployedPricing {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--chip);
+    border: 1px solid var(--border);
+}
+
+.dpRate {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    color: var(--fg);
+}
+
+.dpUnit {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.dpAccrued {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.dpAccrued.stopped {
+    color: #ef4444;
+}
+
+.deployedMeta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+}
+
+.deployedMetaRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+}
+
+.deployedK {
+    color: var(--muted);
+}
+
+.deployedV {
+    font-weight: 500;
+}
+
+.deployedActions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+}
+
+.depActBtn {
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    letter-spacing: 0.2px;
+    color: var(--fg);
+}
+
+.depActBtn:hover {
+    border-color: var(--fg);
+    background: var(--hover-bg);
+}
+
+.depActBtn.view {
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.depActBtn.view:hover {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.depActBtn.edit {
+    color: #a78bfa;
+    border-color: rgba(167, 139, 250, 0.3);
+}
+
+.depActBtn.edit:hover {
+    background: rgba(167, 139, 250, 0.08);
+}
+
+.depActBtn.stop {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.depActBtn.stop:hover {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.depActBtn.start {
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.depActBtn.start:hover {
+    background: rgba(34, 197, 94, 0.08);
+}
+
+.depActBtn.destroy {
+    color: var(--muted);
+    border-color: var(--border);
+    margin-left: auto;
+}
+
+.depActBtn.destroy:hover {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.08);
 }
 </style>

@@ -569,7 +569,7 @@ function onClose() {
 .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+    background: var(--overlay);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     display: grid;
@@ -582,7 +582,7 @@ function onClose() {
     width: min(980px, 100%);
     height: min(86vh, 900px);
     border: 1px solid var(--border);
-    background: rgba(17, 17, 19, 0.96);
+    background: var(--card);
     border-radius: 18px;
     overflow: hidden;
     box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
@@ -650,7 +650,7 @@ function onClose() {
 .tab.active {
     border-color: var(--fg);
     background: var(--fg);
-    color: #000;
+    color: var(--btn-primary-fg);
 }
 
 .tabsMeta {
@@ -684,13 +684,13 @@ function onClose() {
 .panelScroll {
     min-height: 0;
     overflow: auto;
-    background: #0f0f12;
+    background: var(--chip);
     padding: 12px;
 }
 
 .codeScroll {
     padding: 0;
-    background: #0f0f12;
+    background: var(--chip);
 }
 
 .panelHead {
@@ -736,7 +736,7 @@ function onClose() {
 /* ✅ Env vars */
 .envWrap {
     border-bottom: 1px solid var(--border);
-    background: #0f0f12;
+    background: var(--chip);
     padding: 10px 12px 12px;
     display: grid;
     gap: 8px;
@@ -786,7 +786,7 @@ function onClose() {
 .envItem {
     border: 1px solid var(--border);
     border-radius: 14px;
-    background: rgba(17, 17, 19, 0.95);
+    background: var(--card);
     padding: 10px;
     display: grid;
     gap: 8px;
@@ -808,14 +808,14 @@ function onClose() {
     width: 100%;
     border-radius: 12px;
     border: 1px solid var(--border);
-    background: #0e0e11;
+    background: var(--input-bg);
     color: var(--fg);
     padding: 10px 12px;
     outline: none;
     font-size: 12px;
 }
 .envInput::placeholder {
-    color: #666;
+    color: var(--muted);
 }
 
 .iconBtn {
@@ -826,7 +826,7 @@ function onClose() {
 /* Prompt sits below footer */
 .promptWrap {
     border-top: 1px solid var(--border);
-    background: #0f0f12;
+    background: var(--chip);
     padding: 10px 12px 12px;
     display: grid;
     gap: 8px;
@@ -861,7 +861,7 @@ function onClose() {
     max-height: 220px;
     border-radius: 14px;
     border: 1px solid var(--border);
-    background: #0e0e11;
+    background: var(--input-bg);
     color: var(--fg);
     padding: 10px 12px;
     outline: none;
@@ -872,7 +872,7 @@ function onClose() {
         "Liberation Mono", "Courier New", monospace;
 }
 .prompt::placeholder {
-    color: #666;
+    color: var(--muted);
 }
 
 /* Explain list */
@@ -886,7 +886,7 @@ function onClose() {
 .step {
     border: 1px solid var(--border);
     border-radius: 14px;
-    background: rgba(17, 17, 19, 0.95);
+    background: var(--card);
     padding: 12px;
 }
 
@@ -914,7 +914,7 @@ function onClose() {
     padding: 4px 8px;
     border-radius: 999px;
     border: 1px solid var(--border);
-    background: #0e0e11;
+    background: var(--input-bg);
     color: var(--fg);
 }
 
@@ -923,7 +923,7 @@ function onClose() {
     padding: 10px;
     border-radius: 12px;
     border: 1px solid var(--border);
-    background: #0e0e11;
+    background: var(--input-bg);
     color: var(--fg);
     font-size: 12px;
     line-height: 1.5;
@@ -940,7 +940,7 @@ function onClose() {
     border: none;
     outline: none;
     padding: 12px;
-    background: #0f0f12;
+    background: var(--chip);
     color: var(--fg);
     font-size: 12px;
     line-height: 1.5;
@@ -991,11 +991,11 @@ button.ghost {
 button.primary {
     border-color: var(--fg);
     background: var(--fg);
-    color: #000;
+    color: var(--btn-primary-fg);
 }
 button.primary:hover {
-    border-color: #fff;
-    background: #fff;
+    border-color: var(--fg);
+    background: var(--btn-primary-bg);
 }
 
 .mono {
@@ -1015,7 +1015,7 @@ button.primary:hover {
     padding: 8px 12px;
     border-radius: 999px;
     border: 1px solid var(--border);
-    background: rgba(20, 20, 22, 0.92);
+    background: var(--card);
     color: var(--fg);
     font-size: 12px;
 }

@@ -776,7 +776,7 @@ async function deploy() {
 .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.78);
+    background: var(--overlay);
     display: grid;
     place-items: center;
     padding: 22px;
@@ -785,8 +785,8 @@ async function deploy() {
 .modal {
     width: min(1080px, 96vw);
     height: min(760px, 92vh);
-    background: #000;
-    color: #fff;
+    background: var(--bg);
+    color: var(--fg);
     border-radius: 16px;
     box-shadow: 0 30px 120px rgba(0, 0, 0, 0.7);
     overflow: hidden;
@@ -800,7 +800,7 @@ async function deploy() {
     align-items: center;
     justify-content: space-between;
     padding: 18px 20px;
-    background: #000;
+    background: var(--bg);
 }
 .title .name {
     font-size: 18px;
@@ -823,13 +823,13 @@ async function deploy() {
     align-items: center;
     gap: 10px;
     padding: 10px 14px 14px;
-    background: #000;
+    background: var(--bg);
 }
 .tab {
     appearance: none;
     border: 0;
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    background: var(--chip);
+    color: var(--fg);
     padding: 10px 12px;
     border-radius: 12px;
     font-size: 12px;
@@ -840,13 +840,13 @@ async function deploy() {
         opacity 0.12s ease;
 }
 .tab:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--chip);
 }
 .tab:active {
     transform: translateY(1px);
 }
 .tab.active {
-    background: rgba(255, 255, 255, 0.18);
+    background: var(--chip);
 }
 .tab:disabled {
     opacity: 0.45;
@@ -890,7 +890,7 @@ async function deploy() {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    background: #000;
+    background: var(--bg);
 }
 
 /* Model selector */
@@ -905,8 +905,8 @@ async function deploy() {
 .modelTab {
     appearance: none;
     border: 0;
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.6);
+    background: var(--hover-bg);
+    color: var(--muted);
     padding: 8px 14px;
     border-radius: 10px;
     font-size: 12px;
@@ -915,12 +915,12 @@ async function deploy() {
     transition: background 0.12s ease, color 0.12s ease;
 }
 .modelTab:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: var(--chip);
+    color: var(--fg);
 }
 .modelTab.active {
-    background: rgba(255, 255, 255, 0.16);
-    color: #fff;
+    background: var(--chip);
+    color: var(--fg);
 }
 .modelList {
     display: grid;
@@ -929,8 +929,8 @@ async function deploy() {
 .modelRow {
     appearance: none;
     border: 0;
-    background: rgba(255, 255, 255, 0.04);
-    color: #fff;
+    background: var(--hover-bg);
+    color: var(--fg);
     padding: 10px 14px;
     border-radius: 12px;
     cursor: pointer;
@@ -942,11 +942,11 @@ async function deploy() {
     text-align: left;
 }
 .modelRow:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--chip);
 }
 .modelRow.selected {
-    background: rgba(255, 255, 255, 0.14);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    background: var(--chip);
+    box-shadow: inset 0 0 0 1px var(--border);
 }
 .modelName {
     font-size: 13px;
@@ -982,8 +982,8 @@ async function deploy() {
     border: 0;
     padding: 0;
     text-align: left;
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
+    background: var(--hover-bg);
+    color: var(--fg);
     border-radius: 14px;
     cursor: pointer;
     transition:
@@ -992,13 +992,13 @@ async function deploy() {
     aspect-ratio: 1 / 1;
 }
 .tile:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--chip);
 }
 .tile:active {
     transform: translateY(1px);
 }
 .tile.selected {
-    background: rgba(255, 255, 255, 0.16);
+    background: var(--chip);
 }
 .tileInner {
     height: 100%;
@@ -1057,13 +1057,13 @@ async function deploy() {
     outline: none;
     border-radius: 14px;
     padding: 16px 16px;
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
+    background: var(--hover-bg);
+    color: var(--fg);
     font-size: 13px;
     line-height: 1.35;
 }
 .prompt:focus {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--chip);
 }
 .prompt:disabled {
     opacity: 0.6;
@@ -1073,7 +1073,7 @@ async function deploy() {
     position: absolute;
     inset: 0;
     border-radius: 14px;
-    background: rgba(0, 0, 0, 0.62);
+    background: var(--overlay);
     display: grid;
     place-items: center;
     gap: 10px;
@@ -1124,13 +1124,13 @@ async function deploy() {
     outline: none;
     border-radius: 14px;
     padding: 12px 12px;
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
+    background: var(--hover-bg);
+    color: var(--fg);
     font-size: 13px;
     line-height: 1.35;
 }
 .qInput:focus {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--chip);
 }
 
 /* Code */
@@ -1143,7 +1143,7 @@ async function deploy() {
     margin: 0;
     padding: 14px;
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--hover-bg);
     overflow: auto;
     font-size: 12px;
     line-height: 1.45;
@@ -1170,7 +1170,7 @@ async function deploy() {
 .skeleton {
     height: 46px;
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--hover-bg);
 }
 
 /* Spinner */
@@ -1184,8 +1184,8 @@ async function deploy() {
     width: 18px;
     height: 18px;
     border-radius: 999px;
-    border: 2px solid rgba(255, 255, 255, 0.22);
-    border-top-color: rgba(255, 255, 255, 0.9);
+    border: 2px solid var(--border);
+    border-top-color: var(--fg);
     animation: spin 0.9s linear infinite;
 }
 @keyframes spin {
@@ -1211,15 +1211,15 @@ async function deploy() {
     transform: translateY(1px);
 }
 .ghost {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    background: var(--chip);
+    color: var(--fg);
 }
 .ghost:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--chip);
 }
 .primary {
-    background: #fff;
-    color: #000;
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-fg);
     font-weight: 750;
 }
 .primary:hover {
@@ -1248,8 +1248,8 @@ async function deploy() {
     position: absolute;
     right: 18px;
     bottom: 18px;
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    background: var(--chip);
+    color: var(--fg);
     border-radius: 12px;
     padding: 10px 12px;
     font-size: 12px;

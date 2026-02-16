@@ -158,7 +158,7 @@ header {
 .tabs {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 8px;
     flex: 1;
 }
@@ -166,13 +166,13 @@ header {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 6px 10px;
+    padding: 8px 16px;
     border-radius: 999px;
     border: 1px solid var(--border);
     background: transparent;
     color: var(--muted);
     text-decoration: none;
-    font-size: 11px;
+    font-size: 13px;
     letter-spacing: 0.2px;
     white-space: nowrap;
     transition:
