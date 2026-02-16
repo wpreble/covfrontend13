@@ -640,4 +640,15 @@ button:disabled {
 .err {
     color: var(--danger);
 }
+
+@media (max-width: 600px) {
+    .pagehead {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    button {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+}
 </style>

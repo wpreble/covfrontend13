@@ -74,4 +74,5 @@ body {
         "Segoe UI Emoji";
     letter-spacing: 0.2px;
     transition: background 0.25s ease, color 0.25s ease;
+    -webkit-text-size-adjust: 100%;
 }

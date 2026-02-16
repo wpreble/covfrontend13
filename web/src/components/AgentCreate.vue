@@ -1345,5 +1345,43 @@ async function copyText(text) {
     .review-grid {
         grid-template-columns: 1fr;
     }
+    .modal {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        max-height: 100vh;
+    }
+    .overlay {
+        padding: 0;
+    }
+    .template-grid {
+        grid-template-columns: 1fr;
+    }
+    .step-num {
+        width: 24px;
+        height: 24px;
+        font-size: 11px;
+    }
+    .step-label {
+        font-size: 10px;
+    }
+    .mr-meta {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .mr-left {
+        overflow: hidden;
+    }
+    .mr-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .body {
+        padding: 16px;
+    }
+    .topbar {
+        padding: 14px 16px;
+    }
 }
 </style>

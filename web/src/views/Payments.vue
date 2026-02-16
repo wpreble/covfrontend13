@@ -427,4 +427,10 @@ button:disabled { opacity: .3; cursor: not-allowed; }
 .qs-v.green { color: #4ade80; }
 .qs-v.red { color: #ef4444; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
+@media (max-width: 480px) {
+    .btnrow { grid-template-columns: 1fr; }
+    .card-row { grid-template-columns: 1fr; }
+    .sidebar-card { padding: 12px; }
+}
 </style>

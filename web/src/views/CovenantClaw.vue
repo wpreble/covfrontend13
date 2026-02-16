@@ -2320,4 +2320,49 @@ function resetDemo() {
         grid-template-columns: 1fr;
     }
 }
+
+@media (max-width: 600px) {
+    .cc-title {
+        font-size: 28px;
+    }
+    .cc-hero {
+        padding: 24px 16px;
+    }
+    .cc-onboarding {
+        padding: 16px 12px 0;
+    }
+    .cc-ob-container {
+        max-width: 100%;
+    }
+    .cc-int-grid {
+        grid-template-columns: 1fr;
+    }
+    .cc-chat-input {
+        padding: 10px 12px 14px;
+    }
+    .cc-input {
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+    .cc-send {
+        padding: 10px 14px;
+    }
+    .cc-chat-messages {
+        padding: 16px 12px;
+    }
+    .cc-mon-terminal {
+        padding: 10px 12px;
+        font-size: 10px;
+    }
+    .cc-log-line {
+        flex-wrap: wrap;
+    }
+    .cc-mon-overview {
+        padding: 12px;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+    .cc-center-tabs {
+        padding: 0 12px;
+    }
+}
 </style>

@@ -558,4 +558,22 @@ button.ghost:hover {
     line-height: 1;
     margin-top: -2px;
 }
+
+@media (max-width: 480px) {
+    .pagehead {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .rightActions {
+        flex-wrap: wrap;
+    }
+    button {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    .fab {
+        bottom: 20px;
+        right: 20px;
+    }
+}
 </style>

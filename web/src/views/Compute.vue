@@ -1633,4 +1633,29 @@ tr:hover td {
     border-color: rgba(239, 68, 68, 0.3);
     background: rgba(239, 68, 68, 0.08);
 }
+
+@media (max-width: 700px) {
+    .pagehead {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .subtabs {
+        width: 100%;
+    }
+    .subtab {
+        flex: 1;
+    }
+    .gpuOptions {
+        grid-template-columns: 1fr;
+    }
+    .deployedGrid {
+        grid-template-columns: 1fr;
+    }
+    .detailGrid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    .costSummary {
+        flex-wrap: wrap;
+    }
+}
 </style>

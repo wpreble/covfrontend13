@@ -349,4 +349,37 @@ header {
         display: none;
     }
 }
+
+@media (max-width: 600px) {
+    header {
+        flex-wrap: wrap;
+        position: relative;
+        padding: 12px;
+    }
+    .brand {
+        width: 100%;
+        padding-right: 48px;
+    }
+    .tabs {
+        order: 3;
+        flex: unset;
+        width: 100%;
+        justify-content: flex-start;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar {
+        display: none;
+    }
+    .tab {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+    .header-actions {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+    }
+}
 </style>

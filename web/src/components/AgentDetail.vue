@@ -369,5 +369,32 @@ function copyCurl(endpoint) {
     .info-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+    .modal {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        max-height: 100vh;
+    }
+    .overlay {
+        padding: 0;
+    }
+    .body {
+        padding: 16px;
+    }
+    .topbar {
+        padding: 14px 16px;
+    }
+    .code-block {
+        overflow-x: auto;
+    }
+    .code-block pre {
+        white-space: pre;
+    }
+}
+
+@media (max-width: 400px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
