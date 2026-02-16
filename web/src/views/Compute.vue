@@ -359,7 +359,8 @@ console.log(res.choices[<span class="cn">0</span>].message.content);</pre>
             </template>
         </template>
 
-        <!-- MAP (always visible below) -->
+        <!-- MAP + NODES (deploy tab only) -->
+        <template v-if="activeTab === 'deploy'">
         <section class="card mapCard">
             <div class="head">
                 <h3>Global Node Distribution</h3>
@@ -545,6 +546,7 @@ console.log(res.choices[<span class="cn">0</span>].message.content);</pre>
                 </div>
             </div>
         </section>
+        </template>
     </div>
 </template>
 
