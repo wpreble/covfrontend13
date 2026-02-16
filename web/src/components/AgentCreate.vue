@@ -199,12 +199,15 @@
                                     :class="{ selected: selectedModel === m.id }"
                                     @click="selectedModel = m.id"
                                 >
-                                    <div class="mr-name">{{ m.name }}</div>
-                                    <div class="mr-meta mono">
-                                        <span>{{ m.params }}</span>
-                                        <span>{{ m.ctx }}</span>
-                                        <span>{{ m.gpu }}</span>
+                                    <div class="mr-left">
+                                        <div class="mr-name">{{ m.name }}</div>
+                                        <div class="mr-meta mono">
+                                            <span>{{ m.params }}</span>
+                                            <span>{{ m.ctx }}</span>
+                                            <span>{{ m.gpu }}</span>
+                                        </div>
                                     </div>
+                                    <div class="mr-price">${{ m.price.toFixed(2) }}<span class="mr-price-unit">/hr</span></div>
                                 </button>
                             </div>
 
@@ -301,6 +304,10 @@
                             <div class="review-item" v-if="computeMode === 'new'">
                                 <div class="rv-label">Region</div>
                                 <div class="rv-value">{{ regions.find(r => r.id === selectedRegion)?.name || '—' }}</div>
+                            </div>
+                            <div class="review-item" v-if="computeMode === 'new'">
+                                <div class="rv-label">Est. Cost</div>
+                                <div class="rv-value rv-price">${{ (activeModels.find(m => m.id === selectedModel)?.price || 0).toFixed(2) }}<span class="rv-price-unit">/hr</span></div>
                             </div>
                         </div>
 
@@ -409,17 +416,17 @@ const templates = ref([
 ]);
 
 const generalModels = [
-    { id: "kimi-25-secure", name: "Kimi K2 (Recommended)", params: "1T MoE", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB" },
-    { id: "qwen-3-235b", name: "Qwen 3 235B", params: "235B MoE", ctx: "128k", gpu: "NVIDIA A100 80GB" },
-    { id: "deepseek-v3", name: "DeepSeek V3", params: "671B MoE", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB" },
-    { id: "llama-4-scout", name: "Llama 4 Scout", params: "109B MoE", ctx: "512k", gpu: "NVIDIA A100 80GB" },
-    { id: "minimax-m1", name: "MiniMax-M1", params: "456B", ctx: "1M", gpu: "NVIDIA H100 SXM 80GB" },
+    { id: "kimi-25-secure", name: "Kimi K2 (Recommended)", params: "1T MoE", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
+    { id: "qwen-3-235b", name: "Qwen 3 235B", params: "235B MoE", ctx: "128k", gpu: "NVIDIA A100 80GB", price: 1.79 },
+    { id: "deepseek-v3", name: "DeepSeek V3", params: "671B MoE", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
+    { id: "llama-4-scout", name: "Llama 4 Scout", params: "109B MoE", ctx: "512k", gpu: "NVIDIA A100 80GB", price: 1.79 },
+    { id: "minimax-m1", name: "MiniMax-M1", params: "456B", ctx: "1M", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
 ];
 
 const finetunedModels = [
-    { id: "ft-qwen3-covenant", name: "Qwen 3 235B - Covenant Custom", params: "235B MoE (FT)", ctx: "128k", gpu: "NVIDIA A100 80GB" },
-    { id: "ft-minimax-ops", name: "MiniMax-M1 - Ops Fine-tune", params: "456B (FT)", ctx: "1M", gpu: "NVIDIA H100 SXM 80GB" },
-    { id: "ft-kimi-secure", name: "Kimi K2 - Secure Covenant", params: "1T MoE (FT)", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB" },
+    { id: "ft-qwen3-covenant", name: "Qwen 3 235B - Covenant Custom", params: "235B MoE (FT)", ctx: "128k", gpu: "NVIDIA A100 80GB", price: 1.79 },
+    { id: "ft-minimax-ops", name: "MiniMax-M1 - Ops Fine-tune", params: "456B (FT)", ctx: "1M", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
+    { id: "ft-kimi-secure", name: "Kimi K2 - Secure Covenant", params: "1T MoE (FT)", ctx: "128k", gpu: "NVIDIA H100 SXM 80GB", price: 2.49 },
 ];
 
 const activeModels = computed(() =>
@@ -1025,10 +1032,34 @@ async function copyText(text) {
     font-size: 13px;
     font-weight: 600;
 }
+.mr-left {
+    flex: 1;
+    min-width: 0;
+}
 .mr-meta {
     display: flex;
     gap: 12px;
     font-size: 11px;
+    color: var(--muted);
+}
+.mr-price {
+    font-size: 14px;
+    font-weight: 700;
+    color: #4ade80;
+    white-space: nowrap;
+}
+.mr-price-unit {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+}
+.rv-price {
+    color: #4ade80;
+    font-weight: 700;
+}
+.rv-price-unit {
+    font-size: 11px;
+    font-weight: 400;
     color: var(--muted);
 }
 
