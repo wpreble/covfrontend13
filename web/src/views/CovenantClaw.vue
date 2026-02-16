@@ -246,6 +246,9 @@
                         Monitor
                         <span v-if="unreadLogs > 0" class="cc-log-badge">{{ unreadLogs }}</span>
                     </button>
+                    <button class="cc-center-tab" :class="{ active: centerTab === 'memory' }" @click="centerTab = 'memory'">
+                        Memory
+                    </button>
                 </div>
 
                 <template v-if="centerTab === 'chat'">
@@ -356,6 +359,122 @@
                             </div>
                             <div v-if="filteredLogs.length === 0" class="cc-log-empty">
                                 No logs matching filter "{{ logFilter }}"
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template v-if="centerTab === 'memory'">
+                    <div class="cc-memory">
+                        <div v-if="!activeMemFile" class="cc-mem-list">
+                            <div class="cc-mem-list-header">
+                                <h3>System Memory Files</h3>
+                                <button class="cc-mem-new-btn" @click="createNewMemFile">+ New File</button>
+                            </div>
+                            <p class="cc-mem-desc">These markdown files define how CovenantClaw thinks, responds, and remembers. Edit them to customize your agent's behavior.</p>
+                            <div class="cc-mem-files">
+                                <div
+                                    v-for="file in memoryFiles"
+                                    :key="file.id"
+                                    class="cc-mem-file-card"
+                                    @click="openMemFile(file)"
+                                >
+                                    <div class="cc-mem-file-icon">{{ file.icon }}</div>
+                                    <div class="cc-mem-file-info">
+                                        <strong>{{ file.name }}</strong>
+                                        <span class="cc-mem-file-desc">{{ file.description }}</span>
+                                    </div>
+                                    <div class="cc-mem-file-meta">
+                                        <span class="cc-mem-file-versions">{{ file.versions.length }} version{{ file.versions.length !== 1 ? 's' : '' }}</span>
+                                        <span class="cc-mem-file-updated">{{ formatMemDate(file.versions[file.versions.length - 1]?.savedAt) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-else class="cc-mem-editor-wrap">
+                            <div class="cc-mem-editor-toolbar">
+                                <button class="cc-mem-back-btn" @click="closeMemFile">&larr; Back</button>
+                                <div class="cc-mem-editor-title">
+                                    <span class="cc-mem-editor-icon">{{ activeMemFile.icon }}</span>
+                                    <strong>{{ activeMemFile.name }}</strong>
+                                </div>
+                                <div class="cc-mem-editor-actions">
+                                    <button
+                                        class="cc-mem-history-btn"
+                                        :class="{ active: showVersionHistory }"
+                                        @click="showVersionHistory = !showVersionHistory"
+                                    >
+                                        History ({{ activeMemFile.versions.length }})
+                                    </button>
+                                    <button
+                                        v-if="memEditing"
+                                        class="cc-mem-cancel-btn"
+                                        @click="cancelMemEdit"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        v-if="memEditing"
+                                        class="cc-mem-save-btn"
+                                        @click="saveMemFile"
+                                    >
+                                        Save
+                                    </button>
+                                    <button
+                                        v-else
+                                        class="cc-mem-edit-btn"
+                                        @click="startMemEdit"
+                                    >
+                                        Edit
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="cc-mem-editor-body">
+                                <div class="cc-mem-content-area" :class="{ 'with-history': showVersionHistory }">
+                                    <textarea
+                                        v-if="memEditing"
+                                        v-model="memEditContent"
+                                        class="cc-mem-textarea"
+                                        spellcheck="false"
+                                    ></textarea>
+                                    <div v-else class="cc-mem-preview">
+                                        <pre class="cc-mem-pre">{{ activeMemFileContent }}</pre>
+                                    </div>
+                                </div>
+
+                                <div v-if="showVersionHistory" class="cc-mem-history-panel">
+                                    <div class="cc-mem-history-header">
+                                        <h4>Version History</h4>
+                                    </div>
+                                    <div class="cc-mem-history-list">
+                                        <div
+                                            v-for="(ver, idx) in [...activeMemFile.versions].reverse()"
+                                            :key="idx"
+                                            class="cc-mem-history-item"
+                                            :class="{ active: activeVersionIdx === (activeMemFile.versions.length - 1 - idx) }"
+                                            @click="viewVersion(activeMemFile.versions.length - 1 - idx)"
+                                        >
+                                            <div class="cc-mem-history-ver">
+                                                v{{ activeMemFile.versions.length - idx }}
+                                                <span v-if="idx === 0" class="cc-mem-current-badge">Current</span>
+                                            </div>
+                                            <div class="cc-mem-history-date">{{ formatMemDateTime(ver.savedAt) }}</div>
+                                            <div class="cc-mem-history-size">{{ ver.content.length }} chars</div>
+                                        </div>
+                                        <div v-if="activeMemFile.versions.length === 0" class="cc-mem-history-empty">
+                                            No versions yet
+                                        </div>
+                                    </div>
+                                    <button
+                                        v-if="activeVersionIdx !== activeMemFile.versions.length - 1 && activeVersionIdx !== null"
+                                        class="cc-mem-revert-btn"
+                                        @click="revertToVersion"
+                                    >
+                                        Revert to v{{ activeVersionIdx + 1 }}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -879,6 +998,223 @@ function resetDemo() {
         i.enabled = false;
     });
     selectedModel.value = "kimi-25-secure";
+}
+
+/* ── Memory System ── */
+const MEMORY_STORAGE_KEY = "covenant-claw-memory-files";
+
+const defaultMemoryFiles = [
+    {
+        id: "system_identity",
+        name: "system_identity.md",
+        icon: "\u{1F9E0}",
+        description: "Core identity, personality, and behavior instructions",
+        versions: [{
+            content: `# System Identity\n\nYou are **CovenantClaw**, an autonomous AI agent running on the Covenant Secure Cloud.\n\n## Core Directives\n\n- Act as a helpful, proactive assistant\n- Prioritize user privacy and data security\n- Run all computation on sovereign US-based infrastructure\n- Never share user data with third parties without explicit consent\n\n## Personality\n\n- Professional yet approachable\n- Concise but thorough\n- Proactive — suggest next steps\n- Transparent about capabilities and limitations\n\n## Constraints\n\n- Always disclose when using external APIs\n- Never fabricate information\n- Ask for clarification when instructions are ambiguous\n- Log all actions to the monitoring system`,
+            savedAt: Date.now() - 86400000
+        }]
+    },
+    {
+        id: "tool_instructions",
+        name: "tool_instructions.md",
+        icon: "\u{1F527}",
+        description: "Instructions for how to use tools and integrations",
+        versions: [{
+            content: `# Tool Instructions\n\n## Web Browsing\n- Use the built-in browser to fetch web pages\n- Always summarize content rather than dumping raw HTML\n- Respect robots.txt and rate limits\n\n## Shell / Terminal\n- Execute commands in a secure sandboxed environment\n- Always explain what a command does before running it\n- Never run destructive commands without user confirmation\n\n## Email (Gmail)\n- Read, compose, and manage emails\n- Summarize inbox with priority levels\n- Draft replies in the user's writing style\n\n## Calendar (Google Calendar)\n- View, create, and modify events\n- Detect scheduling conflicts automatically\n- Suggest optimal meeting times\n\n## Code Interpreter\n- Execute Python, JavaScript, and shell scripts\n- Show code before executing when possible\n- Capture and display output clearly\n\n## File System\n- Read and write files in the secure workspace\n- Organize files into logical directories\n- Never access files outside the workspace`,
+            savedAt: Date.now() - 86400000
+        }]
+    },
+    {
+        id: "user_preferences",
+        name: "user_preferences.md",
+        icon: "\u{1F464}",
+        description: "Learned user preferences and behavior patterns",
+        versions: [{
+            content: `# User Preferences\n\n## Communication Style\n- Prefers concise responses\n- Likes bullet points over paragraphs\n- Appreciates code examples\n\n## Work Patterns\n- Most active 9am-6pm PST\n- Prefers async communication\n- Uses markdown for notes\n\n## Technical Stack\n- Primary languages: TypeScript, Python\n- Frameworks: Vue, React, FastAPI\n- Cloud: AWS, Solana\n\n## Priorities\n- Security and privacy first\n- Speed over perfection for drafts\n- Detailed analysis for production code`,
+            savedAt: Date.now() - 86400000
+        }]
+    },
+    {
+        id: "knowledge_base",
+        name: "knowledge_base.md",
+        icon: "\u{1F4DA}",
+        description: "Domain knowledge and reference information",
+        versions: [{
+            content: `# Knowledge Base\n\n## Covenant Secure Cloud\n- Sovereign AI infrastructure\n- US-based data centers\n- NVIDIA H100 and A100 GPU clusters\n- End-to-end encryption\n\n## Solana Integration\n- Program address: BUam43b33sLJvKqb3u7jSwUb3JisLDzAYDN4ECNmsGSU\n- Uses Anchor framework for on-chain calls\n- Supports SPL tokens and PDAs\n\n## Supported Models\n- Kimi 2.5 (Secure, recommended)\n- Opus 4.6 (Anthropic — data exposure warning)\n- GPT 5.2 (OpenAI — data exposure warning)\n- MiniMax 2.5 (Dedicated compute, most secure)\n\n## Security Policies\n- All data encrypted at rest (AES-256)\n- TLS 1.3 for data in transit\n- Zero-trust network architecture\n- SOC 2 Type II compliant`,
+            savedAt: Date.now() - 86400000
+        }]
+    },
+    {
+        id: "conversation_rules",
+        name: "conversation_rules.md",
+        icon: "\u{1F4AC}",
+        description: "Rules governing conversation flow and responses",
+        versions: [{
+            content: `# Conversation Rules\n\n## Response Format\n- Start with a direct answer, then elaborate\n- Use markdown formatting for structure\n- Include code blocks with language tags\n- Use tables for structured data\n\n## Sub-Agent Spawning\n- Spawn sub-agents for multi-step tasks\n- Always announce when a sub-agent is activated\n- Show sub-agent progress in real-time\n- Consolidate results before presenting\n\n## Error Handling\n- Never silently fail\n- Provide clear error messages\n- Suggest recovery actions\n- Log errors to monitoring system\n\n## Context Management\n- Remember conversation context within session\n- Reference previous messages when relevant\n- Track user's current task/goal\n- Proactively offer related suggestions`,
+            savedAt: Date.now() - 86400000
+        }]
+    },
+    {
+        id: "safety_guardrails",
+        name: "safety_guardrails.md",
+        icon: "\u{1F6E1}\uFE0F",
+        description: "Safety rules, content filters, and operational boundaries",
+        versions: [{
+            content: `# Safety Guardrails\n\n## Content Policy\n- No generation of harmful or illegal content\n- No assistance with malicious hacking or exploitation\n- No impersonation of real individuals\n- Flag potentially dangerous requests\n\n## Data Protection\n- Never log sensitive credentials in plain text\n- Redact PII in monitoring logs\n- Encrypt all stored user data\n- Auto-delete temporary files after task completion\n\n## Operational Limits\n- Max 5 concurrent sub-agents\n- Rate limit: 60 requests/minute per user\n- Max file size: 100MB\n- Session timeout: 4 hours\n\n## Escalation\n- Escalate to human review for ambiguous safety decisions\n- Log all flagged content for audit\n- Notify user when request is modified for safety`,
+            savedAt: Date.now() - 86400000
+        }]
+    }
+];
+
+function loadMemoryFiles() {
+    try {
+        const saved = localStorage.getItem(MEMORY_STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+                return parsed.filter(f => f && f.id && f.name && Array.isArray(f.versions)).map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    icon: f.icon || "\u{1F4C4}",
+                    description: f.description || "",
+                    versions: f.versions.filter(v => v && typeof v.content === "string").map(v => ({
+                        content: v.content,
+                        savedAt: v.savedAt || Date.now()
+                    }))
+                }));
+            }
+        }
+    } catch (e) {}
+    return JSON.parse(JSON.stringify(defaultMemoryFiles));
+}
+
+function saveMemoryToStorage() {
+    try {
+        const plain = memoryFiles.map(f => ({
+            id: f.id,
+            name: f.name,
+            icon: f.icon,
+            description: f.description,
+            versions: f.versions.map(v => ({ content: v.content, savedAt: v.savedAt }))
+        }));
+        localStorage.setItem(MEMORY_STORAGE_KEY, JSON.stringify(plain));
+    } catch (e) {}
+}
+
+const memoryFiles = reactive(loadMemoryFiles());
+const activeMemFile = ref(null);
+const activeVersionIdx = ref(null);
+const memEditing = ref(false);
+const memEditContent = ref("");
+const showVersionHistory = ref(false);
+
+const activeMemFileContent = computed(() => {
+    if (!activeMemFile.value) return "";
+    if (activeVersionIdx.value !== null) {
+        return activeMemFile.value.versions[activeVersionIdx.value]?.content || "";
+    }
+    const versions = activeMemFile.value.versions;
+    return versions[versions.length - 1]?.content || "";
+});
+
+function openMemFile(file) {
+    activeMemFile.value = file;
+    activeVersionIdx.value = null;
+    memEditing.value = false;
+    showVersionHistory.value = false;
+}
+
+function closeMemFile() {
+    if (memEditing.value && memEditContent.value.trim() !== activeMemFileContent.value.trim()) {
+        if (!confirm("You have unsaved changes. Discard them?")) return;
+    }
+    activeMemFile.value = null;
+    activeVersionIdx.value = null;
+    memEditing.value = false;
+    memEditContent.value = "";
+    showVersionHistory.value = false;
+}
+
+function startMemEdit() {
+    memEditContent.value = activeMemFileContent.value;
+    memEditing.value = true;
+    activeVersionIdx.value = null;
+}
+
+function cancelMemEdit() {
+    memEditing.value = false;
+    memEditContent.value = "";
+}
+
+function saveMemFile() {
+    if (!activeMemFile.value) return;
+    const currentContent = activeMemFile.value.versions[activeMemFile.value.versions.length - 1]?.content || "";
+    if (memEditContent.value.trim() === currentContent.trim()) {
+        memEditing.value = false;
+        return;
+    }
+    activeMemFile.value.versions.push({
+        content: memEditContent.value,
+        savedAt: Date.now()
+    });
+    memEditing.value = false;
+    memEditContent.value = "";
+    activeVersionIdx.value = null;
+    saveMemoryToStorage();
+}
+
+function viewVersion(idx) {
+    activeVersionIdx.value = idx;
+    memEditing.value = false;
+}
+
+function revertToVersion() {
+    if (!activeMemFile.value || activeVersionIdx.value === null) return;
+    if (!activeMemFile.value.versions[activeVersionIdx.value]) return;
+    const versionContent = activeMemFile.value.versions[activeVersionIdx.value].content;
+    activeMemFile.value.versions.push({
+        content: versionContent,
+        savedAt: Date.now()
+    });
+    activeVersionIdx.value = null;
+    saveMemoryToStorage();
+}
+
+function createNewMemFile() {
+    const id = "custom_" + Date.now();
+    const newFile = {
+        id,
+        name: "untitled_" + (memoryFiles.length + 1) + ".md",
+        icon: "\u{1F4C4}",
+        description: "Custom memory file",
+        versions: [{
+            content: "# New Memory File\n\nAdd your content here.",
+            savedAt: Date.now()
+        }]
+    };
+    memoryFiles.push(newFile);
+    saveMemoryToStorage();
+    openMemFile(newFile);
+    startMemEdit();
+}
+
+function formatMemDate(ts) {
+    if (!ts) return "";
+    const d = new Date(ts);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffH = Math.floor(diffMs / 3600000);
+    if (diffH < 1) return "just now";
+    if (diffH < 24) return diffH + "h ago";
+    const diffD = Math.floor(diffH / 24);
+    if (diffD < 7) return diffD + "d ago";
+    return d.toLocaleDateString();
+}
+
+function formatMemDateTime(ts) {
+    if (!ts) return "";
+    const d = new Date(ts);
+    return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 </script>
 
@@ -2303,6 +2639,406 @@ function resetDemo() {
     background: #ff5b5b15;
 }
 
+/* ===================== MEMORY ===================== */
+.cc-memory {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.cc-mem-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.cc-mem-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.cc-mem-list-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.cc-mem-new-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--fg);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.cc-mem-new-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--fg);
+}
+
+.cc-mem-desc {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 20px;
+    line-height: 1.5;
+}
+
+.cc-mem-files {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cc-mem-file-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.cc-mem-file-card:hover {
+    border-color: var(--muted);
+    background: var(--hover-bg);
+}
+
+.cc-mem-file-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.cc-mem-file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.cc-mem-file-info strong {
+    display: block;
+    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    margin-bottom: 2px;
+}
+
+.cc-mem-file-desc {
+    font-size: 11px;
+    color: var(--muted);
+    display: block;
+}
+
+.cc-mem-file-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.cc-mem-file-versions {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--hover-bg);
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.cc-mem-file-updated {
+    font-size: 10px;
+    color: var(--muted);
+}
+
+.cc-mem-editor-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.cc-mem-editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.cc-mem-back-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    flex-shrink: 0;
+}
+
+.cc-mem-back-btn:hover {
+    color: var(--fg);
+    border-color: var(--fg);
+}
+
+.cc-mem-editor-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.cc-mem-editor-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.cc-mem-editor-title strong {
+    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cc-mem-editor-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.cc-mem-history-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.cc-mem-history-btn:hover {
+    color: var(--fg);
+    border-color: var(--fg);
+}
+
+.cc-mem-history-btn.active {
+    background: var(--hover-bg);
+    color: var(--fg);
+    border-color: var(--fg);
+}
+
+.cc-mem-edit-btn {
+    padding: 5px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--btn-primary-bg);
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-fg);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.cc-mem-edit-btn:hover {
+    filter: brightness(1.1);
+}
+
+.cc-mem-save-btn {
+    padding: 5px 16px;
+    border-radius: 6px;
+    border: none;
+    background: #22c55e;
+    color: var(--btn-primary-fg);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.cc-mem-save-btn:hover {
+    background: #16a34a;
+}
+
+.cc-mem-cancel-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.cc-mem-cancel-btn:hover {
+    color: var(--fg);
+    border-color: var(--fg);
+}
+
+.cc-mem-editor-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.cc-mem-content-area {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.cc-mem-content-area.with-history {
+    border-right: 1px solid var(--border);
+}
+
+.cc-mem-textarea {
+    flex: 1;
+    width: 100%;
+    padding: 20px 24px;
+    border: none;
+    outline: none;
+    background: var(--code-bg, rgba(0, 0, 0, 0.3));
+    color: var(--fg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    resize: none;
+    tab-size: 4;
+}
+
+.cc-mem-preview {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+}
+
+.cc-mem-pre {
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: var(--fg);
+}
+
+.cc-mem-history-panel {
+    width: 260px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--card);
+}
+
+.cc-mem-history-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.cc-mem-history-header h4 {
+    margin: 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.cc-mem-history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.cc-mem-history-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    margin-bottom: 4px;
+}
+
+.cc-mem-history-item:hover {
+    background: var(--hover-bg);
+}
+
+.cc-mem-history-item.active {
+    background: var(--hover-bg);
+    border: 1px solid var(--border);
+}
+
+.cc-mem-history-ver {
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cc-mem-current-badge {
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #4ade8015;
+    color: #4ade80;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.cc-mem-history-date {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.cc-mem-history-size {
+    font-size: 10px;
+    color: var(--muted);
+}
+
+.cc-mem-history-empty {
+    text-align: center;
+    padding: 24px 0;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.cc-mem-revert-btn {
+    margin: 8px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #f59e0b40;
+    background: #f59e0b12;
+    color: #fbbf24;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    text-align: center;
+}
+
+.cc-mem-revert-btn:hover {
+    background: #f59e0b25;
+    border-color: #f59e0b60;
+}
+
 /* ===================== RESPONSIVE ===================== */
 @media (max-width: 1100px) {
     .cc-active {
@@ -2363,6 +3099,45 @@ function resetDemo() {
     }
     .cc-center-tabs {
         padding: 0 12px;
+    }
+    .cc-mem-list {
+        padding: 16px 12px;
+    }
+    .cc-mem-file-card {
+        flex-wrap: wrap;
+        padding: 12px;
+        gap: 10px;
+    }
+    .cc-mem-file-meta {
+        flex-direction: row;
+        gap: 8px;
+        width: 100%;
+    }
+    .cc-mem-editor-toolbar {
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        gap: 8px;
+    }
+    .cc-mem-editor-body {
+        flex-direction: column;
+    }
+    .cc-mem-content-area.with-history {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+    .cc-mem-history-panel {
+        width: 100%;
+        max-height: 200px;
+    }
+    .cc-mem-textarea {
+        padding: 14px 12px;
+        font-size: 12px;
+    }
+    .cc-mem-preview {
+        padding: 14px 12px;
+    }
+    .cc-mem-pre {
+        font-size: 12px;
     }
 }
 </style>

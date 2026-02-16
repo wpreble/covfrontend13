@@ -44,7 +44,7 @@ The Vite dev server proxies these paths to the backend at `http://localhost:3000
 - **Agents** (`/agents`) — Agent management with Covenant-themed agents (Covenant Claw CMO, Growth Hacker, Sentinel, Micro Chat, Ops Automator). FAB button opens Deploy Agent modal with template selection, conduit code upload, compute selection, and endpoint generation.
 - **Payments** (`/payments`) — Payment/billing interface
 - **Compute** (`/compute`) — Compute resource management with Deploy/Command tabs
-- **CovenantClaw** (`/covenantclaw`) — Autonomous AI assistant with 3-phase flow (Welcome, Onboarding, Active chat) and Monitor tab with real-time system logs
+- **CovenantClaw** (`/covenantclaw`) — Autonomous AI assistant with 3-phase flow (Welcome, Onboarding, Active chat). Center tabs: Chat, Monitor (real-time system logs), Memory (system memory markdown files with version history, editing, and revert capability — persisted in localStorage)
 - Legacy `/command` redirects to `/compute`, `/build` redirects to `/covenantclaw`
 
 ### Development Server
