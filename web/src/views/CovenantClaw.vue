@@ -236,53 +236,130 @@
                 </div>
             </div>
 
-            <!-- Center: Chat -->
+            <!-- Center: Chat / Monitor -->
             <div class="cc-chat-main">
-                <div class="cc-chat-messages" ref="messagesEl">
-                    <div
-                        v-for="(m, i) in messages"
-                        :key="i"
-                        class="cc-msg"
-                        :class="m.role"
-                    >
-                        <div class="cc-msg-bubble">
-                            <div class="cc-msg-role">
-                                <span v-if="m.role === 'user'">You</span>
-                                <span v-else class="cc-msg-claw-label">
-                                    CovenantClaw
-                                    <span v-if="m.subagent" class="cc-msg-sa-tag">via {{ m.subagent }}</span>
-                                </span>
-                            </div>
-                            <div class="cc-msg-text" v-html="formatMsg(m.text)"></div>
-                        </div>
-                    </div>
-
-                    <div v-if="thinking" class="cc-msg assistant">
-                        <div class="cc-msg-bubble">
-                            <div class="cc-msg-role">CovenantClaw</div>
-                            <div class="cc-msg-text cc-thinking">
-                                <span class="dot1">.</span><span class="dot2">.</span><span class="dot3">.</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="cc-chat-input">
-                    <input
-                        v-model="input"
-                        class="cc-input"
-                        placeholder="Message CovenantClaw..."
-                        @keydown.enter="send"
-                        :disabled="thinking"
-                    />
-                    <button
-                        class="cc-send"
-                        :disabled="!input.trim() || thinking"
-                        @click="send"
-                    >
-                        Send
+                <div class="cc-center-tabs">
+                    <button class="cc-center-tab" :class="{ active: centerTab === 'chat' }" @click="centerTab = 'chat'">
+                        Chat
+                    </button>
+                    <button class="cc-center-tab" :class="{ active: centerTab === 'monitor' }" @click="centerTab = 'monitor'">
+                        Monitor
+                        <span v-if="unreadLogs > 0" class="cc-log-badge">{{ unreadLogs }}</span>
                     </button>
                 </div>
+
+                <template v-if="centerTab === 'chat'">
+                    <div class="cc-chat-messages" ref="messagesEl">
+                        <div
+                            v-for="(m, i) in messages"
+                            :key="i"
+                            class="cc-msg"
+                            :class="m.role"
+                        >
+                            <div class="cc-msg-bubble">
+                                <div class="cc-msg-role">
+                                    <span v-if="m.role === 'user'">You</span>
+                                    <span v-else class="cc-msg-claw-label">
+                                        CovenantClaw
+                                        <span v-if="m.subagent" class="cc-msg-sa-tag">via {{ m.subagent }}</span>
+                                    </span>
+                                </div>
+                                <div class="cc-msg-text" v-html="formatMsg(m.text)"></div>
+                            </div>
+                        </div>
+
+                        <div v-if="thinking" class="cc-msg assistant">
+                            <div class="cc-msg-bubble">
+                                <div class="cc-msg-role">CovenantClaw</div>
+                                <div class="cc-msg-text cc-thinking">
+                                    <span class="dot1">.</span><span class="dot2">.</span><span class="dot3">.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cc-chat-input">
+                        <input
+                            v-model="input"
+                            class="cc-input"
+                            placeholder="Message CovenantClaw..."
+                            @keydown.enter="send"
+                            :disabled="thinking"
+                        />
+                        <button
+                            class="cc-send"
+                            :disabled="!input.trim() || thinking"
+                            @click="send"
+                        >
+                            Send
+                        </button>
+                    </div>
+                </template>
+
+                <template v-if="centerTab === 'monitor'">
+                    <div class="cc-monitor">
+                        <div class="cc-mon-overview">
+                            <div class="cc-mon-stat">
+                                <div class="cc-mon-stat-label">Status</div>
+                                <div class="cc-mon-stat-val">
+                                    <span class="cc-status-dot live"></span>
+                                    Online
+                                </div>
+                            </div>
+                            <div class="cc-mon-stat">
+                                <div class="cc-mon-stat-label">Model</div>
+                                <div class="cc-mon-stat-val mono">{{ models.find(m => m.id === selectedModel)?.name || '—' }}</div>
+                            </div>
+                            <div class="cc-mon-stat">
+                                <div class="cc-mon-stat-label">Compute</div>
+                                <div class="cc-mon-stat-val mono">Dedicated GPU</div>
+                            </div>
+                            <div class="cc-mon-stat">
+                                <div class="cc-mon-stat-label">Uptime</div>
+                                <div class="cc-mon-stat-val mono">{{ agentUptime }}</div>
+                            </div>
+                            <div class="cc-mon-stat">
+                                <div class="cc-mon-stat-label">Requests</div>
+                                <div class="cc-mon-stat-val mono">{{ totalRequests }}</div>
+                            </div>
+                            <div class="cc-mon-stat">
+                                <div class="cc-mon-stat-label">Sub-Agents</div>
+                                <div class="cc-mon-stat-val mono">{{ subAgents.length }}</div>
+                            </div>
+                        </div>
+
+                        <div class="cc-mon-log-header">
+                            <h3>System Logs</h3>
+                            <div class="cc-mon-log-controls">
+                                <select v-model="logFilter" class="cc-mon-filter">
+                                    <option value="all">All</option>
+                                    <option value="system">System</option>
+                                    <option value="agent">Agent</option>
+                                    <option value="compute">Compute</option>
+                                    <option value="error">Errors</option>
+                                </select>
+                                <button class="cc-mon-clear" @click="clearLogs">Clear</button>
+                            </div>
+                        </div>
+
+                        <div class="cc-mon-terminal" ref="terminalEl">
+                            <div
+                                v-for="(log, i) in filteredLogs"
+                                :key="i"
+                                class="cc-log-line"
+                                :class="log.level"
+                            >
+                                <span class="cc-log-time">{{ log.time }}</span>
+                                <span class="cc-log-level" :class="log.level">{{ log.level.toUpperCase() }}</span>
+                                <span class="cc-log-source">[{{ log.source }}]</span>
+                                <span class="cc-log-msg">{{ log.message }}</span>
+                            </div>
+                            <div v-if="filteredLogs.length === 0" class="cc-log-empty">
+                                No logs matching filter "{{ logFilter }}"
+                            </div>
+                        </div>
+                    </div>
+                </template>
             </div>
 
             <!-- Right: Settings -->
@@ -352,7 +429,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, nextTick } from "vue";
+import { ref, reactive, computed, watch, nextTick } from "vue";
 
 /* ── State ── */
 const phase = ref("welcome"); // welcome | onboarding | active
@@ -363,7 +440,13 @@ const showSettings = ref(true);
 const thinking = ref(false);
 const input = ref("");
 const messagesEl = ref(null);
+const terminalEl = ref(null);
 const agentName = ref("covenant-claw-01");
+const centerTab = ref("chat");
+const logFilter = ref("all");
+const unreadLogs = ref(0);
+const deployTimestamp = ref(null);
+const totalRequests = ref(0);
 const systemPrompt = ref(
     "You are CovenantClaw, an AI assistant running on Covenant Secure Cloud. You help the user manage their digital life — email, calendar, code, research, and automation."
 );
@@ -564,13 +647,42 @@ function mockAuth(intg) {
 
 async function deploy() {
     deploying.value = true;
+    systemLogs.splice(0);
+    deployTimestamp.value = Date.now();
+    totalRequests.value = 0;
+    centerTab.value = "chat";
+    unreadLogs.value = 0;
 
-    await new Promise((r) => setTimeout(r, 2500));
+    addLog("info", "system", "Initializing deployment sequence...");
+    await new Promise((r) => setTimeout(r, 400));
+    addLog("info", "system", `Agent name: ${agentName.value}`);
+    addLog("info", "compute", "Requesting dedicated GPU allocation...");
+    await new Promise((r) => setTimeout(r, 500));
+    addLog("info", "compute", "GPU node assigned: us-west-2 / NVIDIA H100 SXM 80GB");
+    addLog("info", "compute", "Container runtime starting...");
+    await new Promise((r) => setTimeout(r, 400));
+    const modelName = models.find((m) => m.id === selectedModel.value)?.name || "Unknown";
+    addLog("info", "agent", `Loading model: ${modelName}`);
+    await new Promise((r) => setTimeout(r, 500));
+    addLog("info", "agent", "Model weights loaded — inference engine ready");
+    addLog("info", "agent", `System prompt configured (${systemPrompt.value.length} chars)`);
 
-    // Seed activity
+    if (enabledIntegrations.value.length > 0) {
+        addLog("info", "system", `Syncing ${enabledIntegrations.value.length} integration(s)...`);
+        for (const intg of enabledIntegrations.value) {
+            await new Promise((r) => setTimeout(r, 200));
+            addLog("info", "agent", `Integration connected: ${intg.name}`);
+        }
+    }
+
+    addLog("info", "system", "Core skills activated: Web Browsing, Shell, File System, Code Interpreter, Web Search, Data Analysis");
+    await new Promise((r) => setTimeout(r, 300));
+    addLog("info", "compute", "Health check passed — all systems nominal");
+    addLog("info", "system", "CovenantClaw deployment complete — agent is online");
+
     activities.splice(0, activities.length,
         { icon: "🚀", label: "Agent Deployed", detail: `${agentName.value} is now live`, time: "just now", type: "success", status: "complete" },
-        { icon: "🛡️", label: "Model Loaded", detail: models.find((m) => m.id === selectedModel.value)?.name, time: "just now", type: "info", status: "complete" },
+        { icon: "🛡️", label: "Model Loaded", detail: modelName, time: "just now", type: "info", status: "complete" },
         { icon: "🔌", label: "Integrations Synced", detail: `${enabledIntegrations.value.length} connected`, time: "just now", type: "info", status: "complete" },
         { icon: "🌐", label: "Web Browsing", detail: "Core skill activated", time: "just now", type: "info", status: "active" },
         { icon: "💻", label: "Shell Access", detail: "Core skill activated", time: "just now", type: "info", status: "active" },
@@ -580,7 +692,6 @@ async function deploy() {
         { id: "main", name: "CovenantClaw (Primary)", task: "Listening for instructions", status: "active" },
     );
 
-    // Seed welcome message
     messages.splice(0, messages.length, {
         role: "assistant",
         text: `**CovenantClaw is online.** 🟢\n\nI'm your sovereign AI assistant running on Covenant Secure Cloud. Here's what I can do:\n\n- **Email & Calendar** — Manage your inbox, draft replies, schedule meetings\n- **Code & Terminal** — Write code, run commands, manage repositories\n- **Research & Web** — Browse the web, search, analyze documents\n- **Automate** — I'll spin up sub-agents for complex multi-step tasks\n\n${enabledIntegrations.value.length > 0 ? "**Connected integrations:** " + enabledIntegrations.value.map((i) => i.icon + " " + i.name).join(", ") + "\n\n" : ""}What would you like me to help with?`,
@@ -666,6 +777,10 @@ async function send() {
     input.value = "";
     await scrollToBottom();
 
+    totalRequests.value++;
+    addLog("info", "agent", `User request received: "${text.substring(0, 80)}${text.length > 80 ? '...' : ''}"`);
+    addLog("info", "agent", "Processing request — selecting tools...");
+
     thinking.value = true;
     await scrollToBottom();
 
@@ -673,6 +788,12 @@ async function send() {
     await new Promise((r) => setTimeout(r, delay));
 
     const response = pickDemoResponse(text);
+
+    if (response.subagent) {
+        addLog("info", "agent", `Spawning sub-agent: ${response.subagent}`);
+    }
+    addLog("info", "compute", `Inference call — model: ${models.find((m) => m.id === selectedModel.value)?.name} — latency: ${Math.floor(delay)}ms`);
+
     messages.push({
         role: "assistant",
         text: response.text,
@@ -681,14 +802,65 @@ async function send() {
 
     if (response.activity) {
         activities.unshift(response.activity);
+        addLog("info", "agent", `Task completed: ${response.activity.label} — ${response.activity.detail}`);
     }
     if (response.sa) {
         subAgents.push(response.sa);
+        addLog("info", "agent", `Sub-agent registered: ${response.sa.name}`);
     }
+
+    addLog("info", "agent", "Response delivered to user");
 
     thinking.value = false;
     await scrollToBottom();
 }
+
+/* ── Monitor / Logging System ── */
+const systemLogs = reactive([]);
+
+function getLogTimestamp() {
+    const now = new Date();
+    return now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }) + "." + String(now.getMilliseconds()).padStart(3, "0");
+}
+
+const agentUptime = computed(() => {
+    if (!deployTimestamp.value) return "—";
+    const diff = Date.now() - deployTimestamp.value;
+    const s = Math.floor(diff / 1000);
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
+    if (h > 0) return `${h}h ${m % 60}m`;
+    if (m > 0) return `${m}m ${s % 60}s`;
+    return `${s}s`;
+});
+
+const filteredLogs = computed(() => {
+    if (logFilter.value === "all") return systemLogs;
+    if (logFilter.value === "error") return systemLogs.filter((l) => l.level === "error" || l.level === "warn");
+    return systemLogs.filter((l) => l.source.toLowerCase().includes(logFilter.value));
+});
+
+function addLog(level, source, message) {
+    systemLogs.push({ time: getLogTimestamp(), level, source, message });
+    if (centerTab.value !== "monitor") {
+        unreadLogs.value++;
+    }
+    nextTick(() => {
+        if (terminalEl.value) {
+            terminalEl.value.scrollTop = terminalEl.value.scrollHeight;
+        }
+    });
+}
+
+function clearLogs() {
+    systemLogs.splice(0);
+}
+
+watch(centerTab, (val) => {
+    if (val === "monitor") {
+        unreadLogs.value = 0;
+    }
+});
 
 function resetDemo() {
     phase.value = "welcome";
@@ -697,6 +869,11 @@ function resetDemo() {
     messages.splice(0);
     activities.splice(0);
     subAgents.splice(0);
+    systemLogs.splice(0);
+    centerTab.value = "chat";
+    unreadLogs.value = 0;
+    deployTimestamp.value = null;
+    totalRequests.value = 0;
     integrations.forEach((i) => {
         i.authed = false;
         i.enabled = false;
@@ -1584,6 +1761,243 @@ function resetDemo() {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* ===================== CENTER TABS ===================== */
+.cc-center-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    flex-shrink: 0;
+}
+
+.cc-center-tab {
+    position: relative;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cc-center-tab:hover {
+    color: var(--fg);
+}
+
+.cc-center-tab.active {
+    color: var(--fg);
+}
+
+.cc-center-tab.active::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--fg);
+    border-radius: 2px 2px 0 0;
+}
+
+.cc-log-badge {
+    font-size: 10px;
+    min-width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-weight: 700;
+    padding: 0 5px;
+    line-height: 1;
+}
+
+/* ===================== MONITOR ===================== */
+.cc-monitor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+}
+
+.cc-mon-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.cc-mon-stat {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+}
+
+.cc-mon-stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.cc-mon-stat-val {
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cc-mon-stat-val .cc-status-dot {
+    width: 6px;
+    height: 6px;
+}
+
+.cc-mon-log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.cc-mon-log-header h3 {
+    margin: 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+}
+
+.cc-mon-log-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.cc-mon-filter {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--fg);
+    font-size: 11px;
+    outline: none;
+    cursor: pointer;
+}
+
+.cc-mon-clear {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.cc-mon-clear:hover {
+    color: var(--fg);
+    border-color: var(--fg);
+}
+
+.cc-mon-terminal {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 24px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    background: var(--code-bg, rgba(0, 0, 0, 0.3));
+}
+
+.cc-log-line {
+    display: flex;
+    gap: 8px;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.cc-log-line:last-child {
+    border-bottom: none;
+}
+
+.cc-log-time {
+    color: var(--muted);
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.cc-log-level {
+    flex-shrink: 0;
+    font-weight: 700;
+    min-width: 42px;
+    text-align: right;
+}
+
+.cc-log-level.info {
+    color: #60a5fa;
+}
+
+.cc-log-level.warn {
+    color: #fbbf24;
+}
+
+.cc-log-level.error {
+    color: #f87171;
+}
+
+.cc-log-level.debug {
+    color: #a78bfa;
+}
+
+.cc-log-source {
+    color: #4ade80;
+    flex-shrink: 0;
+}
+
+.cc-log-msg {
+    color: var(--fg);
+    word-break: break-word;
+}
+
+.cc-log-line.error .cc-log-msg {
+    color: #f87171;
+}
+
+.cc-log-line.warn .cc-log-msg {
+    color: #fbbf24;
+}
+
+.cc-log-empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 /* ===================== CHAT ===================== */
