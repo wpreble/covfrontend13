@@ -18,6 +18,9 @@
             <RouterLink to="/covenantclaw" class="tab" active-class="active"
                 >CovenantClaw</RouterLink
             >
+            <RouterLink to="/alfred" class="tab alfred-tab" active-class="active"
+                >Alfred</RouterLink
+            >
         </nav>
 
         <div class="header-actions">
@@ -319,6 +322,18 @@ header {
     font-size: 12px;
     color: var(--fg);
     font-weight: 600;
+}
+
+/* Alfred tab — gold accent when active */
+.alfred-tab.active {
+    color: #09090b;
+    background: #c9a84c;
+    border-color: #c9a84c;
+}
+.alfred-tab:not(.active):hover {
+    color: #c9a84c;
+    border-color: #c9a84c;
+    background: transparent;
 }
 
 .mono {
