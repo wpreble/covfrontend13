@@ -78,9 +78,9 @@ router.beforeEach((to) => {
   }
 
   // logged in → never allow /sign
-  //if (to.name === "Auth" && authed) {
-  //  return { name: "Agents" };
-  //}
+  if (to.name === "Auth" && authed) {
+    return { name: "Agents" };
+  }
 });
 
 export default router;

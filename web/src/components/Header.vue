@@ -28,7 +28,7 @@
                 <button
                     class="settings-btn"
                     :class="{ open: settingsOpen }"
-                    @click="settingsOpen = !settingsOpen"
+                    @click="settingsOpen = !settingsOpen; refreshWallet()"
                     aria-label="Settings"
                 >
                     <svg viewBox="0 0 20 20" fill="none" class="gear-icon">
@@ -79,6 +79,25 @@
                                 <span class="about-val mono">mainnet</span>
                             </div>
                         </div>
+
+                        <div class="dropdown-divider"></div>
+
+                        <div class="dropdown-wallet" v-if="truncatedWallet">
+                            <div class="wallet-status">
+                                <span class="wallet-dot connected"></span>
+                                <span class="wallet-label">Connected</span>
+                            </div>
+                            <code class="wallet-addr">{{ truncatedWallet }}</code>
+                        </div>
+
+                        <button class="dropdown-item logout-item" @click="logout">
+                            <svg viewBox="0 0 20 20" fill="none" class="dropdown-icon">
+                                <path d="M7 17H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M14 13l3-3-3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M17 10H7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                            </svg>
+                            <span>Log Out</span>
+                        </button>
                     </div>
                 </Transition>
             </div>
@@ -87,13 +106,33 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
-import { RouterLink } from "vue-router";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { RouterLink, useRouter } from "vue-router";
+
+const router = useRouter();
 
 const settingsOpen = ref(false);
 const settingsRef = ref(null);
 
 const theme = ref(localStorage.getItem("theme") || "dark");
+
+const walletAddress = ref(localStorage.getItem("mock_wallet") || "");
+const truncatedWallet = computed(() => {
+    const w = walletAddress.value;
+    if (!w) return "";
+    return w.length > 12 ? w.slice(0, 6) + "..." + w.slice(-4) : w;
+});
+
+function refreshWallet() {
+    walletAddress.value = localStorage.getItem("mock_wallet") || "";
+}
+
+function logout() {
+    settingsOpen.value = false;
+    localStorage.removeItem("jwt");
+    localStorage.removeItem("mock_wallet");
+    router.push("/sign");
+}
 
 function applyTheme(t) {
     document.documentElement.setAttribute("data-theme", t);
@@ -338,6 +377,57 @@ header {
 
 .mono {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ── Wallet info ── */
+.dropdown-wallet {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    gap: 8px;
+}
+.wallet-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.wallet-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+}
+.wallet-dot.connected {
+    background: #22c55e;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+.wallet-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.wallet-addr {
+    font-size: 11px;
+    color: var(--fg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    background: var(--chip);
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+/* ── Logout ── */
+.logout-item {
+    color: #ef4444 !important;
+}
+.logout-item .dropdown-icon {
+    color: #ef4444;
+}
+.logout-item:hover {
+    background: rgba(239, 68, 68, 0.08) !important;
 }
 
 /* ── Dropdown transitions ── */
