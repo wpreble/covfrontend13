@@ -22,6 +22,9 @@
             <RouterLink to="/payments" class="tab" active-class="active"
                 >Payments</RouterLink
             >
+            <RouterLink to="/alfred" class="tab alfred-tab" active-class="active"
+                >Alfred</RouterLink
+            >
         </nav>
 
         <div class="pillbar">
@@ -117,5 +120,16 @@ header {
 }
 .pill strong {
     font-weight: 600;
+}
+
+/* Alfred tab — gold accent when active */
+.alfred-tab.active {
+    color: #09090b;
+    background: #c9a84c;
+    border-color: #c9a84c;
+}
+.alfred-tab:not(.active):hover {
+    color: #c9a84c;
+    border-color: #c9a84c;
 }
 </style>
